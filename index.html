@@ -1,0 +1,4269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>祥雨朝暮集</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #eef2ff;
+      --surface: rgba(255, 255, 255, 0.78);
+      --surface-solid: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: rgba(148, 163, 184, 0.45);
+      --accent: #4f46e5;
+      --accent-soft: #e0e7ff;
+      --success: #059669;
+      --success-soft: #d1fae5;
+      --note-bg: rgba(238, 242, 255, 0.95);
+      --note-border: rgba(165, 180, 252, 0.65);
+      --note-text: #3730a3;
+      --radius: 16px;
+      --cell-radius: 14px;
+      --shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 20px 40px -16px rgba(15, 23, 42, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+      color: var(--text);
+      line-height: 1.5;
+      background-color: #e8ecff;
+      background-image:
+        radial-gradient(ellipse 130% 90% at 0% -25%, rgba(99, 102, 241, 0.28), transparent 55%),
+        radial-gradient(ellipse 100% 70% at 100% -10%, rgba(236, 72, 153, 0.14), transparent 50%),
+        radial-gradient(ellipse 90% 60% at 80% 100%, rgba(56, 189, 248, 0.16), transparent 55%),
+        radial-gradient(ellipse 70% 50% at 10% 85%, rgba(167, 139, 250, 0.12), transparent 50%),
+        linear-gradient(168deg, #f0f4ff 0%, #faf8ff 38%, #f5f3ff 72%, #ecfeff 100%);
+      background-attachment: fixed;
+    }
+
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 2.75rem;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #1e1b4b;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+      font-family: "Ma Shan Zheng", cursive;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(2px 2px 4px rgba(102, 126, 234, 0.3));
+      transform: rotate(-2deg);
+      transition: transform 0.3s ease;
+    }
+
+    h1:hover {
+      transform: rotate(0deg) scale(1.05);
+    }
+
+    .month-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem;
+      background: rgba(255, 255, 255, 0.55);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      box-shadow: 0 4px 20px -6px rgba(15, 23, 42, 0.12);
+    }
+
+    .month-nav button {
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.15rem;
+      line-height: 1;
+      color: #4338ca;
+      transition: background 0.18s, color 0.18s, transform 0.18s, box-shadow 0.18s;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+
+    .month-nav button:hover {
+      background: var(--accent-soft);
+      color: var(--accent);
+      transform: scale(1.05);
+      box-shadow: 0 4px 14px -4px rgba(79, 70, 229, 0.35);
+    }
+
+    .month-nav button:active {
+      transform: scale(0.97);
+    }
+
+    .month-nav button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .month-label {
+      min-width: 9.5rem;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1rem;
+      color: #312e81;
+      letter-spacing: 0.02em;
+    }
+
+    .month-picker {
+      min-width: 10rem;
+      padding: 0.5rem 0.8rem;
+      border: 2px solid rgba(99, 102, 241, 0.3);
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #312e81;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: textfield;
+    }
+
+    .month-picker::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+      filter: hue-rotate(220deg) saturate(1.5);
+    }
+
+    .month-picker::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+    }
+
+    .month-picker:hover {
+      border-color: rgba(99, 102, 241, 0.6);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(248, 250, 252, 1));
+      transform: translateY(-1px);
+    }
+
+    .month-picker:focus {
+      outline: none;
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15), 0 4px 12px rgba(99, 102, 241, 0.25);
+      background: white;
+    }
+
+    .calendar-card {
+      background: var(--surface);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      overflow: hidden;
+    }
+
+    .weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      padding: 16px 14px 8px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(248, 250, 252, 0.25) 100%);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .weekdays span {
+      padding: 0.5rem 0.2rem;
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 0.06em;
+      text-transform: none;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    .weekdays span:nth-child(6),
+    .weekdays span:nth-child(7) {
+      color: #6366f1;
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      padding: 8px 14px 16px;
+      background: linear-gradient(180deg, rgba(241, 245, 249, 0.35) 0%, rgba(226, 232, 240, 0.2) 100%);
+    }
+
+    .cell {
+      aspect-ratio: 1;
+      min-height: 82px;
+      padding: 0.45rem 0.4rem 0.4rem;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      font: inherit;
+      text-align: left;
+      color: inherit;
+      gap: 0.25rem;
+      border-radius: var(--cell-radius);
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.22s, transform 0.22s ease;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cell::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: inherit;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 0;
+    }
+
+    .cell > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .cell:hover:not(.cell--empty)::before {
+      opacity: 0.15;
+    }
+
+    .cell:hover:not(.cell--empty) {
+      background: var(--surface-solid);
+      border-color: rgba(129, 140, 248, 0.45);
+      box-shadow:
+        0 10px 28px -8px rgba(15, 23, 42, 0.14),
+        0 4px 12px -4px rgba(99, 102, 241, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 1);
+      transform: translateY(-2px);
+    }
+
+    .cell:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      z-index: 1;
+    }
+
+    .cell--empty {
+      cursor: default;
+      background: rgba(255, 255, 255, 0.22);
+      border: 1px dashed rgba(148, 163, 184, 0.38);
+      box-shadow: none;
+    }
+
+    .cell--today .cell-day {
+      background: linear-gradient(145deg, #4f46e5 0%, #6366f1 55%, #818cf8 100%);
+      color: #fff;
+      width: 1.7rem;
+      height: 1.7rem;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.8rem;
+      box-shadow: 0 3px 12px rgba(79, 70, 229, 0.42);
+    }
+
+    .cell--future {
+      opacity: 0.65;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.55);
+    }
+
+    .cell--future:hover:not(.cell--empty) {
+      background: rgba(255, 255, 255, 0.85);
+      border-color: rgba(129, 140, 248, 0.45);
+      box-shadow:
+        0 10px 28px -8px rgba(15, 23, 42, 0.14),
+        0 4px 12px -4px rgba(99, 102, 241, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 1);
+      transform: translateY(-2px);
+    }
+
+    .cell--selected {
+      border: 2px solid #4f46e5 !important;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2), 0 10px 28px -8px rgba(15, 23, 42, 0.14) !important;
+    }
+
+    .cell--other-month {
+      opacity: 0.38;
+    }
+
+    .cell--other-month.cell--checked {
+      opacity: 0.55;
+    }
+
+    .cell-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.25rem;
+      flex-shrink: 0;
+    }
+
+    .cell-day {
+      font-size: 0.82rem;
+      font-weight: 600;
+      line-height: 1.2;
+      color: #334155;
+    }
+
+    .cell-status {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      padding-top: 1px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #10b981, #34d399);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.22);
+    }
+
+    .cell-note-preview {
+      flex: 1;
+      min-height: 0;
+      margin-top: auto;
+      padding: 0.32rem 0.35rem 0.32rem 0.42rem;
+      border-radius: 10px;
+      background: var(--note-bg);
+      border: 1px solid var(--note-border);
+      font-size: 0.6875rem;
+      font-weight: 500;
+      line-height: 1.45;
+      color: var(--note-text);
+      text-align: left;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      word-break: break-word;
+      cursor: default;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(67, 56, 163, 0.4) transparent;
+    }
+
+    .cell-note-preview::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .cell-note-preview::-webkit-scrollbar-track {
+      background: transparent;
+      margin: 3px 0;
+    }
+
+    .cell-note-preview::-webkit-scrollbar-thumb {
+      background: rgba(67, 56, 163, 0.35);
+      border-radius: 100px;
+    }
+
+    .cell-note-preview::-webkit-scrollbar-thumb:hover {
+      background: rgba(67, 56, 163, 0.55);
+    }
+
+    .cell--checked .cell-note-preview {
+      background: rgba(255, 255, 255, 0.82);
+      border-color: rgba(52, 211, 153, 0.4);
+      color: #0f766e;
+      scrollbar-color: rgba(15, 118, 110, 0.45) transparent;
+    }
+
+    .cell--checked .cell-note-preview::-webkit-scrollbar-thumb {
+      background: rgba(15, 118, 110, 0.38);
+    }
+
+    .cell--checked .cell-note-preview::-webkit-scrollbar-thumb:hover {
+      background: rgba(15, 118, 110, 0.55);
+    }
+
+    .cell:hover:not(.cell--empty) .cell-note-preview {
+      border-color: #818cf8;
+    }
+
+    .cell--checked {
+      background: linear-gradient(152deg, rgba(236, 253, 245, 0.95) 0%, rgba(240, 253, 250, 0.98) 48%, rgba(224, 242, 254, 0.35) 100%);
+      border-color: rgba(52, 211, 153, 0.42);
+    }
+
+    .cell--checked:hover:not(.cell--empty) {
+      border-color: rgba(16, 185, 129, 0.55);
+    }
+
+    .cell-bg-indicator {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      box-shadow: 0 2px 6px rgba(245, 87, 108, 0.4);
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      color: white;
+    }
+
+    .legend {
+      margin-top: 1.25rem;
+      font-size: 0.8rem;
+      color: #475569;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 1.25rem;
+      align-items: center;
+      padding: 0.85rem 1.1rem;
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      box-shadow: 0 4px 20px -10px rgba(15, 23, 42, 0.1);
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* Modal */
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.42);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+
+    .backdrop.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .sheet {
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      width: 100%;
+      max-width: 420px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.15);
+      transform: translateY(100%);
+      transition: transform 0.25s ease;
+    }
+
+    .backdrop.is-open .sheet {
+      transform: translateY(0);
+    }
+
+    @media (min-width: 480px) {
+      .backdrop {
+        align-items: center;
+      }
+      .sheet {
+        border-radius: var(--radius);
+        transform: scale(0.95);
+        opacity: 0;
+        transition: transform 0.2s, opacity 0.2s;
+      }
+      .backdrop.is-open .sheet {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .sheet h2 {
+      margin: 0 0 1rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 12px;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .check-row input {
+      width: 1.15rem;
+      height: 1.15rem;
+      accent-color: var(--success);
+    }
+
+    .check-row label {
+      font-weight: 500;
+      flex: 1;
+    }
+
+    label[for="note"] {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.4rem;
+      color: var(--muted);
+    }
+
+    #note {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      resize: vertical;
+      margin-bottom: 1rem;
+    }
+
+    #note:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .sheet-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      padding: 0.55rem 1.1rem;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+
+    .btn--ghost {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .btn--ghost:hover {
+      background: var(--bg);
+    }
+
+    .btn--primary {
+      background: linear-gradient(145deg, #4f46e5, #6366f1);
+      color: #fff;
+      box-shadow: 0 4px 14px -4px rgba(79, 70, 229, 0.55);
+    }
+
+    .btn--primary:hover {
+      filter: brightness(1.06);
+      box-shadow: 0 6px 18px -4px rgba(79, 70, 229, 0.6);
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .btn--sm {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.82rem;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .attach-block {
+      margin-bottom: 1rem;
+    }
+
+    .attach-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.45rem;
+    }
+
+    .attach-head label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .attach-hint {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 2px;
+    }
+
+    .file-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.45rem 0.55rem;
+      background: #f8fafc;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 10px;
+      font-size: 0.8rem;
+    }
+
+    .file-row__thumb {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #e2e8f0;
+    }
+
+    .file-row__icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #e0e7ff, #f1f5f9);
+      font-size: 1rem;
+    }
+
+    .file-row__meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-row__name {
+      font-weight: 500;
+      color: #334155;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-row__size {
+      font-size: 0.7rem;
+      color: #94a3b8;
+      margin-top: 0.1rem;
+    }
+
+    .file-row__actions {
+      display: flex;
+      flex-shrink: 0;
+      gap: 0.25rem;
+    }
+
+    .file-row__actions button {
+      padding: 0.25rem 0.45rem;
+      font-size: 0.72rem;
+      border-radius: 6px;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      background: #fff;
+      color: #475569;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .file-row__actions button:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .file-row__actions button.danger {
+      color: #b91c1c;
+      border-color: rgba(252, 165, 165, 0.6);
+    }
+
+    .file-row__actions button.danger:hover {
+      background: #fef2f2;
+    }
+
+    .cell-file-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      min-width: 1rem;
+      height: 1rem;
+      padding: 0 0.2rem;
+      border-radius: 4px;
+      background: linear-gradient(135deg, #e0e7ff, #ede9fe);
+      color: #5b21b6;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.2);
+    }
+
+    .attach-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    /* Rich text editor overlay */
+    .rte-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+
+    .rte-backdrop.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .rte-sheet {
+      width: 100%;
+      max-width: 640px;
+      max-height: min(90vh, 720px);
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.97);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.25);
+      padding: 1rem 1.1rem 1.1rem;
+      transform: scale(0.96);
+      opacity: 0;
+      transition: transform 0.22s ease, opacity 0.22s ease;
+    }
+
+    .rte-backdrop.is-open .rte-sheet {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    .rte-sheet h3 {
+      margin: 0 0 0.75rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e1b4b;
+    }
+
+    .rte-sheet label[for="rteDocTitle"] {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+
+    #rteDocTitle {
+      width: 100%;
+      padding: 0.5rem 0.65rem;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      margin-bottom: 0.65rem;
+    }
+
+    #rteDocTitle:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .rte-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.5rem;
+      padding: 0.4rem;
+      background: #f8fafc;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 10px;
+    }
+
+    .rte-toolbar button {
+      padding: 0.35rem 0.55rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 8px;
+      background: #fff;
+      color: #334155;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .rte-toolbar button:hover {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+      color: #4338ca;
+    }
+
+    .rte-toolbar button:active {
+      transform: scale(0.97);
+    }
+
+    .rte-editor {
+      flex: 1;
+      min-height: 200px;
+      max-height: min(38vh, 320px);
+      overflow-y: auto;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      line-height: 1.55;
+      color: #1e293b;
+      background: #fff;
+    }
+
+    .rte-editor:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .rte-editor:empty::before {
+      content: attr(data-placeholder);
+      color: #94a3b8;
+      pointer-events: none;
+    }
+
+    .rte-editor ul,
+    .rte-editor ol {
+      margin: 0.35rem 0;
+      padding-left: 1.35rem;
+    }
+
+    .rte-sheet-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    /* Attachment preview overlay */
+    .preview-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 250;
+      background: rgba(15, 23, 42, 0.58);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+
+    .preview-backdrop.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .preview-sheet {
+      width: 100%;
+      max-width: min(960px, 100%);
+      max-height: min(92vh, 900px);
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.98);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.28);
+      overflow: hidden;
+      transform: scale(0.97);
+      opacity: 0;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .preview-backdrop.is-open .preview-sheet {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+      flex-shrink: 0;
+      background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+    }
+
+    .preview-header h4 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1e293b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .preview-header button {
+      flex-shrink: 0;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.82rem;
+      border-radius: 8px;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      background: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      color: #475569;
+    }
+
+    .preview-header button:hover {
+      background: #f1f5f9;
+    }
+
+    .preview-body {
+      flex: 1;
+      min-height: 200px;
+      max-height: min(78vh, 760px);
+      overflow: auto;
+      padding: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f1f5f9;
+    }
+
+    .preview-body .preview-img {
+      max-width: 100%;
+      max-height: min(72vh, 720px);
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.1);
+    }
+
+    .preview-body .preview-frame {
+      width: 100%;
+      height: min(72vh, 680px);
+      min-height: 360px;
+      border: none;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+    }
+
+    .preview-body .preview-media {
+      max-width: 100%;
+      max-height: min(65vh, 560px);
+      border-radius: 8px;
+    }
+
+    .preview-body .preview-audio {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .preview-body .preview-text {
+      align-self: stretch;
+      width: 100%;
+      margin: 0;
+      padding: 0.75rem 1rem;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #334155;
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      max-height: min(70vh, 640px);
+      overflow: auto;
+      text-align: left;
+    }
+
+    .preview-fallback {
+      text-align: center;
+      padding: 1.5rem 1rem;
+      max-width: 22rem;
+    }
+
+    .preview-fallback__icon {
+      margin: 0 0 0.5rem;
+      font-size: 2rem;
+      opacity: 0.85;
+    }
+
+    .preview-fallback__msg {
+      margin: 0;
+      font-size: 0.88rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    .file-row__actions {
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .file-row__thumb {
+      cursor: pointer;
+    }
+
+    /* Anniversary Panel */
+    .anniversary-panel {
+      background: var(--surface);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      padding: 1.25rem;
+      position: sticky;
+      top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .weather-section {
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    }
+
+    .anniversary-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .anniversary-header h3 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e1b4b;
+    }
+
+    .btn-add-anniversary {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: linear-gradient(145deg, #4f46e5, #6366f1);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 1.3rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-add-anniversary:hover {
+      transform: scale(1.1) rotate(90deg);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.45);
+    }
+
+    .anniversary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      max-height: calc(100vh - 280px);
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .anniversary-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .anniversary-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .anniversary-list::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.3);
+      border-radius: 100px;
+    }
+
+    .anniversary-item {
+      padding: 0.75rem;
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .anniversary-item:hover {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(99, 102, 241, 0.4);
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+    }
+
+    .anniversary-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 0.35rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .anniversary-date {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-bottom: 0.35rem;
+    }
+
+    .anniversary-countdown {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #4f46e5;
+    }
+
+    .anniversary-countdown.is-today {
+      color: #059669;
+      font-size: 0.85rem;
+    }
+
+    .anniversary-countdown.is-past {
+      color: #dc2626;
+    }
+
+    .anniversary-actions {
+      position: absolute;
+      top: 0.4rem;
+      right: 0.4rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .anniversary-item:hover .anniversary-actions {
+      opacity: 1;
+    }
+
+    .btn-delete-anniversary {
+      width: 22px;
+      height: 22px;
+      border: none;
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+      border-radius: 50%;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .btn-delete-anniversary:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    .lunar-date {
+      font-size: 0.62rem;
+      color: #8b5cf6;
+      margin-top: 0.15rem;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .cell--today .lunar-date {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .holiday-indicator {
+      font-size: 0.6rem;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-weight: 600;
+      margin-top: 2px;
+      display: inline-block;
+      line-height: 1;
+    }
+
+    .holiday-indicator.holiday {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      box-shadow: 0 1px 3px rgba(239, 68, 68, 0.3);
+    }
+
+    .holiday-indicator.weekend {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+    }
+
+    .holiday-indicator.workday {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: white;
+      box-shadow: 0 2px 4px rgba(249, 115, 22, 0.5);
+      font-weight: 700;
+      border: 1px solid rgba(234, 88, 12, 0.6);
+      animation: pulse-workday 2s infinite;
+    }
+
+    @keyframes pulse-workday {
+      0%, 100% {
+        box-shadow: 0 2px 4px rgba(249, 115, 22, 0.5);
+      }
+      50% {
+        box-shadow: 0 2px 8px rgba(249, 115, 22, 0.8);
+      }
+    }
+
+    /* Anniversary Modal */
+    .anniversary-form-group {
+      margin-bottom: 0.85rem;
+    }
+
+    .anniversary-form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .anniversary-form-group input,
+    .anniversary-form-group select {
+      width: 100%;
+      padding: 0.55rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.88rem;
+    }
+
+    .anniversary-form-group input:focus,
+    .anniversary-form-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .empty-anniversary {
+      text-align: center;
+      padding: 1.5rem 1rem;
+      color: #94a3b8;
+      font-size: 0.82rem;
+    }
+
+    /* Countdown Section */
+    .countdown-section {
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .countdown-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .countdown-header h3 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e1b4b;
+    }
+
+    .btn-add-countdown {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      border-radius: 50%;
+      font-size: 1.15rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-add-countdown:hover {
+      transform: scale(1.08) rotate(90deg);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    }
+
+    .countdown-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .countdown-item {
+      position: relative;
+      padding: 0.75rem 0.85rem;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(251, 245, 235, 0.9));
+      border-radius: 12px;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      box-shadow: 0 2px 8px rgba(251, 191, 36, 0.1);
+      transition: all 0.2s;
+    }
+
+    .countdown-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+      border-color: rgba(251, 191, 36, 0.5);
+    }
+
+    .countdown-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 0.35rem;
+    }
+
+    .countdown-date {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-bottom: 0.45rem;
+    }
+
+    .countdown-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f59e0b;
+      line-height: 1;
+    }
+
+    .countdown-value.is-past {
+      color: #dc2626;
+    }
+
+    .countdown-actions {
+      position: absolute;
+      top: 0.4rem;
+      right: 0.4rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .countdown-item:hover .countdown-actions {
+      opacity: 1;
+    }
+
+    .btn-delete-countdown {
+      width: 22px;
+      height: 22px;
+      border: none;
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+      border-radius: 50%;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .btn-delete-countdown:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    .empty-countdown {
+      text-align: center;
+      padding: 1.5rem 1rem;
+      color: #94a3b8;
+      font-size: 0.82rem;
+    }
+
+    /* Weather Section */
+    .weather-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .weather-header h3 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e1b4b;
+    }
+
+    .weather-cities-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 0.75rem;
+      max-height: 120px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .weather-cities-list::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .weather-cities-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .weather-cities-list::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.3);
+      border-radius: 100px;
+    }
+
+    .weather-city-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.35rem 0.6rem;
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 20px;
+      font-size: 0.75rem;
+      color: #4f46e5;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .weather-city-tag:hover {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: rgba(99, 102, 241, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .weather-city-tag.active {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    }
+
+    .weather-city-tag .remove-city {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      line-height: 1;
+      transition: background 0.2s;
+    }
+
+    .weather-city-tag:not(.active):hover .remove-city {
+      background: rgba(239, 68, 68, 0.2);
+      color: #dc2626;
+    }
+
+    .weather-city-tag.active .remove-city {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .weather-city-tag.active .remove-city:hover {
+      background: rgba(239, 68, 68, 0.4);
+    }
+
+    .weather-search-box {
+      position: relative;
+      margin-bottom: 0.75rem;
+    }
+
+    .weather-search-input {
+      width: 100%;
+      padding: 0.55rem 0.7rem;
+      padding-right: 2.5rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .weather-search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .weather-search-btn {
+      position: absolute;
+      right: 0.4rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: linear-gradient(145deg, #4f46e5, #6366f1);
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+
+    .weather-search-btn:hover {
+      transform: translateY(-50%) scale(1.05);
+    }
+
+    .weather-current {
+      padding: 0.75rem;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 12px;
+      margin-top: 0.5rem;
+    }
+
+    .weather-current-city {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .weather-current-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .weather-selected-date {
+      font-size: 0.72rem;
+      color: #4f46e5;
+      margin-top: 0.35rem;
+      padding-top: 0.35rem;
+      border-top: 1px dashed rgba(99, 102, 241, 0.2);
+      font-weight: 500;
+    }
+
+    .weather-current-temp {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #4f46e5;
+    }
+
+    .weather-hint {
+      font-size: 0.7rem;
+      color: #94a3b8;
+      margin-top: 0.5rem;
+      line-height: 1.4;
+    }
+
+    .weather-icon-cell {
+      font-size: 1.1rem;
+      line-height: 1;
+      margin-top: 0.1rem;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+    }
+
+    /* Background Image Upload */
+    .bg-upload-section {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .bg-upload-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 0.45rem;
+    }
+
+    .bg-upload-hint {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+
+    .bg-preview-container {
+      position: relative;
+      margin-top: 0.5rem;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .bg-preview-img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .bg-preview-actions {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+
+    .btn-remove-bg {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.78rem;
+      border-radius: 8px;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      background: rgba(239, 68, 68, 0.08);
+      color: #dc2626;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .btn-remove-bg:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.6);
+    }
+
+    /* Voice Recording */
+    .voice-record-section {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .voice-record-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 0.45rem;
+    }
+
+    .voice-record-controls {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-record {
+      padding: 0.5rem 1rem;
+      font-size: 0.82rem;
+      border-radius: 10px;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-record:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-record:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-record.recording {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+      }
+      50% {
+        box-shadow: 0 2px 20px rgba(239, 68, 68, 0.6);
+      }
+    }
+
+    .record-status {
+      font-size: 0.75rem;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .record-status.is-recording {
+      color: #ef4444;
+      font-weight: 500;
+    }
+
+    .record-timer {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #4f46e5;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>祥雨朝暮集</h1>
+      <div class="month-nav">
+        <button type="button" id="prevMonth" aria-label="上一月">‹</button>
+        <input type="month" id="monthPicker" class="month-picker" />
+        <button type="button" id="nextMonth" aria-label="下一月">›</button>
+      </div>
+    </header>
+
+    <aside class="anniversary-panel">
+      <div class="weather-section">
+        <div class="weather-header">
+          <h3>🌤️ 城市天气</h3>
+        </div>
+        <div class="weather-search-box">
+          <input type="text" class="weather-search-input" id="weatherCityInput" placeholder="输入城市名（如：北京）" autocomplete="off" />
+          <button type="button" class="weather-search-btn" id="weatherSearchBtn" title="搜索">🔍</button>
+        </div>
+        <div class="weather-cities-list" id="weatherCitiesList"></div>
+        <div id="weatherCurrent" class="weather-current" style="display: none;">
+          <div class="weather-current-city" id="weatherCityName"></div>
+          <div class="weather-current-info">
+            <span id="weatherIcon" style="font-size: 1.5rem;"></span>
+            <span class="weather-current-temp" id="weatherTemp"></span>
+            <span id="weatherDesc"></span>
+          </div>
+          <div class="weather-selected-date" id="weatherSelectedDate" style="display: none;"></div>
+        </div>
+        <p class="weather-hint">可添加多个城市，点击切换查看；日历将显示未来7天天气预报</p>
+      </div>
+
+      <div class="anniversary-header">
+        <h3>🎉 纪念日</h3>
+        <button type="button" class="btn-add-anniversary" id="addAnniversaryBtn" title="添加纪念日">+</button>
+      </div>
+      <div class="anniversary-list" id="anniversaryList"></div>
+
+      <div class="countdown-section">
+        <div class="countdown-header">
+          <h3>⏰ 倒计时</h3>
+          <button type="button" class="btn-add-countdown" id="addCountdownBtn" title="添加倒计时">+</button>
+        </div>
+        <div class="countdown-list" id="countdownList"></div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="calendar-card">
+        <div class="weekdays">
+          <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+        </div>
+        <div class="grid" id="grid" role="grid" aria-label="月历"></div>
+      </div>
+
+      <p class="legend">
+        <span><i class="dot" aria-hidden="true"></i> 已打卡</span>
+        <span>备注可滚动；附件支持预览（图片、PDF、HTML、音视频、文本等）。单击日期编辑</span>
+      </p>
+    </main>
+  </div>
+
+  <div class="backdrop" id="backdrop" aria-hidden="true">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+      <h2 id="dialogTitle">选择日期</h2>
+      <div class="check-row" id="checkRow">
+        <input type="checkbox" id="checkIn" />
+        <label for="checkIn">今日已打卡</label>
+      </div>
+      <label for="note">备注</label>
+      <textarea id="note" placeholder="记录今天的事…" maxlength="2000"></textarea>
+      <div class="attach-block">
+        <div class="attach-head">
+          <label for="fileInput">附件</label>
+          <div class="attach-actions">
+            <button type="button" class="btn btn--ghost btn--sm" id="pickFilesBtn">选择文件</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="openRteBtn">新建富文本</button>
+          </div>
+        </div>
+        <p class="attach-hint">可多选或新建富文本（保存为 HTML 附件）；单文件不超过 15MB，每天最多 20 个。数据保存在本机浏览器，清除站点数据会丢失。</p>
+        <input type="file" id="fileInput" class="visually-hidden" multiple />
+        <div class="file-list" id="fileList" aria-live="polite"></div>
+      </div>
+      <div class="bg-upload-section">
+        <label class="bg-upload-label" for="bgImageInput">🖼️ 背景图片</label>
+        <p class="bg-upload-hint">为此日期设置专属背景图片（不超过 5MB），支持 JPG、PNG、GIF 等格式</p>
+        <input type="file" id="bgImageInput" class="visually-hidden" accept="image/*" />
+        <button type="button" class="btn btn--ghost btn--sm" id="pickBgImageBtn">选择背景图片</button>
+        <div id="bgPreviewContainer" class="bg-preview-container" style="display: none;">
+          <img id="bgPreviewImg" class="bg-preview-img" alt="背景预览" />
+        </div>
+        <div class="bg-preview-actions" id="bgPreviewActions" style="display: none;">
+          <button type="button" class="btn-remove-bg" id="removeBgBtn">移除背景</button>
+        </div>
+      </div>
+      <div class="voice-record-section">
+        <label class="voice-record-label">🎤 语音记录</label>
+        <div class="voice-record-controls">
+          <button type="button" class="btn-record" id="recordBtn">
+            <span id="recordIcon">⏺️</span>
+            <span id="recordText">开始录音</span>
+          </button>
+          <div class="record-status" id="recordStatus">
+            <span id="recordTimer" class="record-timer" style="display: none;">00:00</span>
+          </div>
+        </div>
+        <p class="bg-upload-hint" style="margin-top: 0.4rem;">点击开始录音，再次点击停止并保存为音频附件</p>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn--ghost" id="closeDialog">取消</button>
+        <button type="button" class="btn btn--primary" id="saveDay">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="rte-backdrop" id="rteBackdrop" aria-hidden="true">
+    <div class="rte-sheet" role="dialog" aria-modal="true" aria-labelledby="rteHeading">
+      <h3 id="rteHeading">新建富文本附件</h3>
+      <label for="rteDocTitle">标题（用作文件名，可选）</label>
+      <input type="text" id="rteDocTitle" maxlength="80" placeholder="例如：会议纪要" autocomplete="off" />
+      <div class="rte-toolbar" role="toolbar" aria-label="格式">
+        <button type="button" data-cmd="bold" title="加粗">B</button>
+        <button type="button" data-cmd="italic" title="斜体">I</button>
+        <button type="button" data-cmd="underline" title="下划线">U</button>
+        <button type="button" data-cmd="strikeThrough" title="删除线">S</button>
+        <button type="button" data-cmd="insertUnorderedList" title="无序列表">• 列表</button>
+        <button type="button" data-cmd="insertOrderedList" title="有序列表">1. 列表</button>
+        <button type="button" data-cmd="formatBlock" data-val="h3" title="小标题">标题</button>
+        <button type="button" data-cmd="formatBlock" data-val="p" title="正文">正文</button>
+        <button type="button" id="rteLinkBtn" title="插入链接">链接</button>
+        <button type="button" data-cmd="removeFormat" title="清除格式">清除格式</button>
+      </div>
+      <div
+        id="rteEditor"
+        class="rte-editor"
+        contenteditable="true"
+        role="textbox"
+        aria-multiline="true"
+        data-placeholder="在此输入内容…"
+      ></div>
+      <div class="rte-sheet-actions">
+        <button type="button" class="btn btn--ghost" id="rteCancelBtn">关闭</button>
+        <button type="button" class="btn btn--primary" id="rteSaveAttachBtn">保存为附件</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="preview-backdrop" id="previewBackdrop" aria-hidden="true">
+    <div class="preview-sheet" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+      <div class="preview-header">
+        <h4 id="previewTitle">预览</h4>
+        <button type="button" id="previewCloseBtn">关闭</button>
+      </div>
+      <div class="preview-body" id="previewBody"></div>
+    </div>
+  </div>
+
+  <div class="backdrop" id="anniversaryModal" aria-hidden="true">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="anniversaryModalTitle">
+      <h2 id="anniversaryModalTitle">添加纪念日</h2>
+      <div class="anniversary-form-group">
+        <label for="anniversaryName">名称</label>
+        <input type="text" id="anniversaryName" placeholder="例如：生日、结婚纪念日" maxlength="50" autocomplete="off" />
+      </div>
+      <div class="anniversary-form-group">
+        <label for="anniversaryDate">日期</label>
+        <input type="date" id="anniversaryDate" />
+      </div>
+      <div class="anniversary-form-group">
+        <label for="anniversaryType">类型</label>
+        <select id="anniversaryType" style="width: 100%; padding: 0.55rem 0.7rem; border: 1px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 0.88rem;">
+          <option value="yearly">每年重复</option>
+          <option value="once">仅一次</option>
+        </select>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn--ghost" id="cancelAnniversary">取消</button>
+        <button type="button" class="btn btn--primary" id="saveAnniversary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="backdrop" id="countdownModal" aria-hidden="true">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="countdownModalTitle">
+      <h2 id="countdownModalTitle">添加倒计时</h2>
+      <div class="anniversary-form-group">
+        <label for="countdownName">名称</label>
+        <input type="text" id="countdownName" placeholder="例如：春节、考试" maxlength="50" autocomplete="off" />
+      </div>
+      <div class="anniversary-form-group">
+        <label for="countdownDate">目标日期</label>
+        <input type="date" id="countdownDate" />
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn--ghost" id="cancelCountdown">取消</button>
+        <button type="button" class="btn btn--primary" id="saveCountdown">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "dailyCheckinData_v1";
+    const IDB_NAME = "dailyCheckinFiles_v1";
+    const IDB_STORE = "files";
+    const MAX_FILE_SIZE = 15 * 1024 * 1024;
+    const MAX_FILES_PER_DAY = 20;
+    const ANNIVERSARY_KEY = "anniversaryData_v1";
+
+    /** @typedef {{ id: string, name: string, type: string, size: number }} FileMeta */
+
+    /** @type {Record<string, { checked?: boolean, note?: string, files?: FileMeta[] }>} */
+    let store = {};
+
+    let viewYear = new Date().getFullYear();
+    let viewMonth = new Date().getMonth();
+    let selectedKey = null;
+
+    /** @type {FileMeta[]} */
+    let dialogExistingFiles = [];
+    /** @type {Set<string>} */
+    let dialogRemovedIds = new Set();
+    /** @type {{ tempId: string, file: File, previewUrl?: string }[]} */
+    let dialogPendingFiles = [];
+
+    /** @type {string | null} */
+    let currentBgImageDataUrl = null;
+
+    /** @type {MediaRecorder | null} */
+    let mediaRecorder = null;
+
+    /** @type {Blob[]} */
+    let audioChunks = [];
+
+    /** @type {number | null} */
+    let recordStartTime = null;
+
+    /** @type {number | null} */
+    let recordTimerInterval = null;
+
+    /** @type {Promise<IDBDatabase> | null} */
+    let idbPromise = null;
+
+    /** @type {Array<{id: string, name: string, date: string, type: 'yearly'|'once'}>} */
+    let anniversaries = [];
+
+    /** @type {{ city: string, forecasts: Array<{date: string, weather: string, temp: string, icon: string}> } | null} */
+    let weatherData = null;
+
+    /** @type {Array<{city: string, forecasts: Array<{date: string, weather: string, temp: string, icon: string}>}>} */
+    let weatherCities = [];
+
+    /** @type {string | null} */
+    let activeWeatherCity = null;
+
+    /** @type {string | null} */
+    let selectedWeatherDate = null;
+
+    // DOM elements - will be initialized in init()
+    let monthLabel, grid, backdrop, dialogTitle, checkIn, note, checkRow;
+    let fileInput, fileListEl, pickFilesBtn, openRteBtn, saveDayBtn;
+    let rteBackdrop, rteEditor, rteDocTitle, rteCancelBtn, rteSaveAttachBtn, rteLinkBtn, rteToolbar;
+    let previewBackdrop, previewTitleEl, previewBody, previewCloseBtn;
+    let anniversaryModal, anniversaryNameInput, anniversaryDateInput, anniversaryTypeSelect;
+    let saveAnniversaryBtn, cancelAnniversaryBtn, addAnniversaryBtn, anniversaryListEl;
+    let bgImageInput, pickBgImageBtn, bgPreviewContainer, bgPreviewImg, bgPreviewActions, removeBgBtn;
+    let recordBtn, recordIcon, recordText, recordStatus, recordTimer;
+    let weatherCityInput, weatherSearchBtn, weatherCurrent, weatherCityName;
+    let weatherIcon, weatherTemp, weatherDesc, weatherSelectedDate, weatherCitiesList;
+
+    /** @type {string | null} */
+    let previewObjectUrl = null;
+
+    const PREVIEW_TEXT_MAX = 1.5 * 1024 * 1024;
+
+    function initDOM() {
+      monthLabel = document.getElementById("monthLabel");
+      grid = document.getElementById("grid");
+      backdrop = document.getElementById("backdrop");
+      dialogTitle = document.getElementById("dialogTitle");
+      checkIn = document.getElementById("checkIn");
+      note = document.getElementById("note");
+      checkRow = document.getElementById("checkRow");
+      fileInput = document.getElementById("fileInput");
+      fileListEl = document.getElementById("fileList");
+      pickFilesBtn = document.getElementById("pickFilesBtn");
+      openRteBtn = document.getElementById("openRteBtn");
+      saveDayBtn = document.getElementById("saveDay");
+      rteBackdrop = document.getElementById("rteBackdrop");
+      rteEditor = document.getElementById("rteEditor");
+      rteDocTitle = document.getElementById("rteDocTitle");
+      rteCancelBtn = document.getElementById("rteCancelBtn");
+      rteSaveAttachBtn = document.getElementById("rteSaveAttachBtn");
+      rteLinkBtn = document.getElementById("rteLinkBtn");
+      rteToolbar = rteBackdrop.querySelector(".rte-toolbar");
+      previewBackdrop = document.getElementById("previewBackdrop");
+      previewTitleEl = document.getElementById("previewTitle");
+      previewBody = document.getElementById("previewBody");
+      previewCloseBtn = document.getElementById("previewCloseBtn");
+      anniversaryModal = document.getElementById("anniversaryModal");
+      anniversaryNameInput = document.getElementById("anniversaryName");
+      anniversaryDateInput = document.getElementById("anniversaryDate");
+      anniversaryTypeSelect = document.getElementById("anniversaryType");
+      saveAnniversaryBtn = document.getElementById("saveAnniversary");
+      cancelAnniversaryBtn = document.getElementById("cancelAnniversary");
+      addAnniversaryBtn = document.getElementById("addAnniversaryBtn");
+      anniversaryListEl = document.getElementById("anniversaryList");
+      countdownModal = document.getElementById("countdownModal");
+      countdownNameInput = document.getElementById("countdownName");
+      countdownDateInput = document.getElementById("countdownDate");
+      saveCountdownBtn = document.getElementById("saveCountdown");
+      cancelCountdownBtn = document.getElementById("cancelCountdown");
+      addCountdownBtn = document.getElementById("addCountdownBtn");
+      countdownListEl = document.getElementById("countdownList");
+      bgImageInput = document.getElementById("bgImageInput");
+      pickBgImageBtn = document.getElementById("pickBgImageBtn");
+      bgPreviewContainer = document.getElementById("bgPreviewContainer");
+      bgPreviewImg = document.getElementById("bgPreviewImg");
+      bgPreviewActions = document.getElementById("bgPreviewActions");
+      removeBgBtn = document.getElementById("removeBgBtn");
+      recordBtn = document.getElementById("recordBtn");
+      recordIcon = document.getElementById("recordIcon");
+      recordText = document.getElementById("recordText");
+      recordStatus = document.getElementById("recordStatus");
+      recordTimer = document.getElementById("recordTimer");
+      weatherCityInput = document.getElementById("weatherCityInput");
+      weatherSearchBtn = document.getElementById("weatherSearchBtn");
+      weatherCurrent = document.getElementById("weatherCurrent");
+      weatherCityName = document.getElementById("weatherCityName");
+      weatherIcon = document.getElementById("weatherIcon");
+      weatherTemp = document.getElementById("weatherTemp");
+      weatherDesc = document.getElementById("weatherDesc");
+      weatherSelectedDate = document.getElementById("weatherSelectedDate");
+      weatherCitiesList = document.getElementById("weatherCitiesList");
+    }
+
+    function formatRecordTime(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function startRecording() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('您的浏览器不支持录音功能');
+        return;
+      }
+
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              audioChunks.push(event.data);
+            }
+          };
+
+          mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            
+            if (audioBlob.size > MAX_FILE_SIZE) {
+              alert('录音文件过大（超过 15MB），请缩短录音时间');
+              return;
+            }
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const fileName = `语音记录-${timestamp}.webm`;
+            const audioFile = new File([audioBlob], fileName, { 
+              type: 'audio/webm',
+              lastModified: Date.now()
+            });
+
+            dialogPendingFiles.push({ tempId: newId(), file: audioFile });
+            renderDialogFiles();
+
+            stream.getTracks().forEach(track => track.stop());
+          };
+
+          mediaRecorder.start();
+          recordStartTime = Date.now();
+          
+          recordBtn.classList.add('recording');
+          recordIcon.textContent = '⏹️';
+          recordText.textContent = '停止录音';
+          recordStatus.classList.add('is-recording');
+          recordTimer.style.display = 'inline';
+          
+          recordTimerInterval = setInterval(() => {
+            const elapsed = Date.now() - recordStartTime;
+            recordTimer.textContent = formatRecordTime(elapsed);
+          }, 100);
+
+        })
+        .catch(err => {
+          console.error('录音失败:', err);
+          alert('无法访问麦克风，请检查权限设置');
+        });
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        
+        if (recordTimerInterval) {
+          clearInterval(recordTimerInterval);
+          recordTimerInterval = null;
+        }
+
+        recordBtn.classList.remove('recording');
+        recordIcon.textContent = '⏺️';
+        recordText.textContent = '开始录音';
+        recordStatus.classList.remove('is-recording');
+        recordTimer.style.display = 'none';
+        recordTimer.textContent = '00:00';
+        
+        recordStartTime = null;
+      }
+    }
+
+    function toggleRecording() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    }
+
+    function newId() {
+      return crypto.randomUUID ? crypto.randomUUID() : `f-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function formatSize(n) {
+      if (n < 1024) return `${n} B`;
+      if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+      return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function slugifyFileStem(rawTitle, dateKey) {
+      let s = (rawTitle || "").trim();
+      if (s.toLowerCase().endsWith(".html")) s = s.slice(0, -5);
+      s = s.replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, "-");
+      if (!s) s = `富文本-${dateKey}`;
+      if (s.length > 72) s = s.slice(0, 72);
+      return s;
+    }
+
+    function buildRichTextDocument(innerHtml, displayTitle) {
+      const t = escapeHtml(displayTitle || "富文本笔记");
+      return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>${t}</title>
+<style>
+  body { font-family: "Noto Sans SC", "Segoe UI", system-ui, sans-serif; line-height: 1.65; max-width: 40rem; margin: 1.5rem auto; padding: 0 1rem; color: #1e293b; }
+  h3 { font-size: 1.15rem; margin: 1rem 0 0.5rem; color: #0f172a; }
+  a { color: #4f46e5; }
+</style>
+</head>
+<body>
+${innerHtml}
+</body>
+</html>`;
+    }
+
+    function isHtmlMime(t) {
+      return typeof t === "string" && (t.includes("html") || t === "application/xhtml+xml");
+    }
+
+    function openIdb() {
+      if (idbPromise) return idbPromise;
+      idbPromise = new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => resolve(req.result);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(IDB_STORE)) {
+            db.createObjectStore(IDB_STORE, { keyPath: "id" });
+          }
+        };
+      });
+      return idbPromise;
+    }
+
+    /** @param {{ id: string, dateKey: string, name: string, type: string, size: number, blob: Blob }} rec */
+    function idbPut(rec) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, "readwrite");
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+            tx.objectStore(IDB_STORE).put(rec);
+          })
+      );
+    }
+
+    function idbDelete(id) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, "readwrite");
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+            tx.objectStore(IDB_STORE).delete(id);
+          })
+      );
+    }
+
+    function idbGet(id) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, "readonly");
+            const r = tx.objectStore(IDB_STORE).get(id);
+            r.onerror = () => reject(r.error);
+            r.onsuccess = () => resolve(r.result);
+          })
+      );
+    }
+
+    /** @param {string[]} ids */
+    function idbDeleteMany(ids) {
+      return Promise.all(ids.map((id) => idbDelete(id)));
+    }
+
+    function inferMime(blob, declared, name) {
+      let m = (declared || blob.type || "").toLowerCase();
+      if (m && m !== "application/octet-stream") return m;
+      const n = (name || "").toLowerCase();
+      if (n.endsWith(".pdf")) return "application/pdf";
+      if (n.endsWith(".html") || n.endsWith(".htm")) return "text/html";
+      if (n.endsWith(".svg")) return "image/svg+xml";
+      if (n.endsWith(".json")) return "application/json";
+      if (n.endsWith(".csv") || n.endsWith(".md") || n.endsWith(".log") || n.endsWith(".txt")) return "text/plain";
+      if (n.endsWith(".xml")) return "application/xml";
+      if (n.endsWith(".js") || n.endsWith(".mjs") || n.endsWith(".cjs")) return "text/javascript";
+      if (n.endsWith(".ts") || n.endsWith(".tsx")) return "text/plain";
+      if (n.endsWith(".css") || n.endsWith(".scss")) return "text/css";
+      return m || "application/octet-stream";
+    }
+
+    /** @returns {"image"|"pdf"|"html"|"video"|"audio"|"text"|"unsupported"} */
+    function getPreviewKind(mime, name) {
+      const m = (mime || "").toLowerCase();
+      const base = (name || "").toLowerCase();
+      if (m.startsWith("image/")) return "image";
+      if (m === "application/pdf" || base.endsWith(".pdf")) return "pdf";
+      if (isHtmlMime(m) || /\.html?$/.test(base)) return "html";
+      if (m.startsWith("video/")) return "video";
+      if (m.startsWith("audio/")) return "audio";
+      if (
+        m.startsWith("text/") ||
+        m === "application/json" ||
+        m === "application/xml" ||
+        /\.(txt|md|json|csv|xml|log|yaml|yml|js|mjs|cjs|ts|tsx|css|scss|vue|sh|bat)$/i.test(base)
+      ) {
+        return "text";
+      }
+      return "unsupported";
+    }
+
+    function renderPreviewFallback(message) {
+      previewBody.innerHTML = "";
+      const wrap = document.createElement("div");
+      wrap.className = "preview-fallback";
+      const icon = document.createElement("p");
+      icon.className = "preview-fallback__icon";
+      icon.textContent = "📎";
+      const p = document.createElement("p");
+      p.className = "preview-fallback__msg";
+      p.textContent = message;
+      wrap.appendChild(icon);
+      wrap.appendChild(p);
+      previewBody.appendChild(wrap);
+    }
+
+    function closeAttachmentPreview() {
+      previewBackdrop.classList.remove("is-open");
+      previewBackdrop.setAttribute("aria-hidden", "true");
+      previewBody.innerHTML = "";
+      previewTitleEl.textContent = "预览";
+      if (previewObjectUrl) {
+        URL.revokeObjectURL(previewObjectUrl);
+        previewObjectUrl = null;
+      }
+    }
+
+    async function openAttachmentPreview(blob, name, mime) {
+      closeAttachmentPreview();
+      const displayName = name || "附件";
+      previewTitleEl.textContent = displayName;
+
+      const effectiveMime = inferMime(blob, mime, displayName);
+      const kind = getPreviewKind(effectiveMime, displayName);
+
+      if (kind === "text") {
+        if (blob.size > PREVIEW_TEXT_MAX) {
+          renderPreviewFallback("文本体积较大，请下载后在本地查看。");
+          previewBackdrop.classList.add("is-open");
+          previewBackdrop.setAttribute("aria-hidden", "false");
+          return;
+        }
+        try {
+          const text = await blob.text();
+          previewBody.innerHTML = "";
+          const pre = document.createElement("pre");
+          pre.className = "preview-text";
+          pre.textContent = text;
+          previewBody.appendChild(pre);
+        } catch {
+          renderPreviewFallback("无法读取该文本内容。");
+        }
+        previewBackdrop.classList.add("is-open");
+        previewBackdrop.setAttribute("aria-hidden", "false");
+        return;
+      }
+
+      if (kind === "unsupported") {
+        renderPreviewFallback("此类型暂不支持内置预览，请使用「下载」保存到本地查看。");
+        previewBackdrop.classList.add("is-open");
+        previewBackdrop.setAttribute("aria-hidden", "false");
+        return;
+      }
+
+      previewObjectUrl = URL.createObjectURL(blob);
+
+      if (kind === "image") {
+        const img = document.createElement("img");
+        img.className = "preview-img";
+        img.src = previewObjectUrl;
+        img.alt = displayName;
+        previewBody.appendChild(img);
+      } else if (kind === "pdf") {
+        const iframe = document.createElement("iframe");
+        iframe.className = "preview-frame";
+        iframe.title = displayName;
+        iframe.src = previewObjectUrl;
+        previewBody.appendChild(iframe);
+      } else if (kind === "html") {
+        const iframe = document.createElement("iframe");
+        iframe.className = "preview-frame";
+        iframe.title = displayName;
+        iframe.setAttribute("sandbox", "allow-same-origin allow-popups allow-forms");
+        iframe.src = previewObjectUrl;
+        previewBody.appendChild(iframe);
+      } else if (kind === "video") {
+        const v = document.createElement("video");
+        v.className = "preview-media";
+        v.controls = true;
+        v.src = previewObjectUrl;
+        previewBody.appendChild(v);
+      } else if (kind === "audio") {
+        const a = document.createElement("audio");
+        a.className = "preview-media preview-audio";
+        a.controls = true;
+        a.src = previewObjectUrl;
+        previewBody.appendChild(a);
+      }
+
+      previewBackdrop.classList.add("is-open");
+      previewBackdrop.setAttribute("aria-hidden", "false");
+    }
+
+    const WEATHER_KEY = "weatherData_v1";
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        store = raw ? JSON.parse(raw) : {};
+        if (typeof store !== "object" || store === null) store = {};
+      } catch {
+        store = {};
+      }
+      loadAnniversaries();
+      loadCountdowns();
+      loadWeatherData();
+    }
+
+    function loadAnniversaries() {
+      try {
+        const raw = localStorage.getItem(ANNIVERSARY_KEY);
+        anniversaries = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(anniversaries)) anniversaries = [];
+      } catch {
+        anniversaries = [];
+      }
+    }
+
+    function saveAnniversaries() {
+      localStorage.setItem(ANNIVERSARY_KEY, JSON.stringify(anniversaries));
+    }
+
+    // Placeholder - actual implementation is below
+
+    function calculateDaysUntil(dateStr, type) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      
+      let targetDate;
+      if (type === 'yearly') {
+        // For yearly anniversaries, use current year
+        const date = new Date(dateStr + 'T00:00:00');
+        targetDate = new Date(now.getFullYear(), date.getMonth(), date.getDate());
+        // If this year's date has passed, use next year
+        if (targetDate < now) {
+          targetDate = new Date(now.getFullYear() + 1, date.getMonth(), date.getDate());
+        }
+      } else {
+        // For one-time anniversaries, use the exact date
+        targetDate = new Date(dateStr + 'T00:00:00');
+        targetDate.setHours(0, 0, 0, 0);
+      }
+      
+      const diffTime = targetDate - now;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    }
+
+    function formatCountdown(days) {
+      if (days > 0) {
+        return `还有 ${days} 天`;
+      } else if (days === 0) {
+        return '今天！';
+      } else {
+        return `已过 ${Math.abs(days)} 天`;
+      }
+    }
+
+    async function fetchWeather(city) {
+      try {
+        // Check if city already exists
+        const existingIndex = weatherCities.findIndex(c => c.city === city);
+        if (existingIndex !== -1) {
+          alert(`城市「${city}」已存在`);
+          switchToCity(city);
+          weatherCityInput.value = '';
+          return;
+        }
+
+        // 使用免费的 Open-Meteo API（无需 API Key）
+        // 首先获取城市的经纬度
+        const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=zh&format=json`;
+        const geoResponse = await fetch(geoUrl);
+        const geoData = await geoResponse.json();
+
+        if (!geoData.results || geoData.results.length === 0) {
+          throw new Error('未找到该城市');
+        }
+
+        const { latitude, longitude, name } = geoData.results[0];
+
+        // 获取天气预报（最多16天）
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=16`;
+        const weatherResponse = await fetch(weatherUrl);
+        const weatherResult = await weatherResponse.json();
+
+        const forecasts = weatherResult.daily.time.map((date, index) => {
+          const code = weatherResult.daily.weathercode[index];
+          const maxTemp = weatherResult.daily.temperature_2m_max[index];
+          const minTemp = weatherResult.daily.temperature_2m_min[index];
+          const weather = getWeatherFromCode(code);
+          const icon = getWeatherIcon(weather);
+
+          return {
+            date,
+            weather,
+            temp: `${Math.round(minTemp)}°~${Math.round(maxTemp)}°`,
+            icon
+          };
+        });
+
+        const newCityData = {
+          city: name,
+          forecasts
+        };
+
+        weatherCities.push(newCityData);
+
+        // Switch to the new city
+        switchToCity(name);
+
+        saveWeatherData();
+        renderWeatherCities();
+        renderMonth();
+
+        // Clear search input
+        weatherCityInput.value = '';
+
+        alert(`已添加城市：${name}`);
+      } catch (error) {
+        console.error('获取天气失败:', error);
+        alert('获取天气失败，请检查城市名称或网络连接');
+      }
+    }
+
+    function switchToCity(cityName) {
+      const cityData = weatherCities.find(c => c.city === cityName);
+      if (cityData) {
+        weatherData = cityData;
+        activeWeatherCity = cityName;
+        selectedWeatherDate = null; // Reset selected date when switching city
+        renderWeatherCurrent();
+        renderMonth();
+        saveWeatherData();
+      }
+    }
+
+    function removeCity(cityName) {
+      if (!confirm(`确定删除城市「${cityName}」吗？`)) {
+        return;
+      }
+
+      weatherCities = weatherCities.filter(c => c.city !== cityName);
+
+      if (activeWeatherCity === cityName) {
+        if (weatherCities.length > 0) {
+          switchToCity(weatherCities[0].city);
+        } else {
+          weatherData = null;
+          activeWeatherCity = null;
+          selectedWeatherDate = null;
+          weatherCurrent.style.display = 'none';
+        }
+      }
+
+      renderWeatherCities();
+      renderMonth();
+      saveWeatherData();
+    }
+
+    function renderWeatherCities() {
+      weatherCitiesList.innerHTML = '';
+
+      for (const cityData of weatherCities) {
+        const tag = document.createElement('div');
+        tag.className = 'weather-city-tag';
+        if (cityData.city === activeWeatherCity) {
+          tag.classList.add('active');
+        }
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = cityData.city;
+        nameSpan.style.flex = '1';
+
+        const removeBtn = document.createElement('span');
+        removeBtn.className = 'remove-city';
+        removeBtn.innerHTML = '×';
+        removeBtn.title = '删除城市';
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeCity(cityData.city);
+        });
+
+        tag.appendChild(nameSpan);
+        tag.appendChild(removeBtn);
+
+        tag.addEventListener('click', () => {
+          switchToCity(cityData.city);
+        });
+
+        weatherCitiesList.appendChild(tag);
+      }
+    }
+
+    function getWeatherFromCode(code) {
+      // WMO Weather interpretation codes (WW)
+      const weatherCodes = {
+        0: '晴朗',
+        1: '主要晴朗',
+        2: '多云',
+        3: '阴天',
+        45: '雾',
+        48: '雾凇',
+        51: '小毛毛雨',
+        53: '中毛毛雨',
+        55: '大毛毛雨',
+        56: '小冻雨',
+        57: '大冻雨',
+        61: '小雨',
+        63: '中雨',
+        65: '大雨',
+        66: '小冻雨',
+        67: '大冻雨',
+        71: '小雪',
+        73: '中雪',
+        75: '大雪',
+        77: '雪粒',
+        80: '小阵雨',
+        81: '中阵雨',
+        82: '大阵雨',
+        85: '小阵雪',
+        86: '大阵雪',
+        95: '雷雨',
+        96: '雷雨伴冰雹',
+        99: '强雷雨伴冰雹'
+      };
+      return weatherCodes[code] || '未知';
+    }
+
+    function renderWeatherCurrent() {
+      if (!weatherData) {
+        weatherCurrent.style.display = 'none';
+        return;
+      }
+
+      weatherCurrent.style.display = 'block';
+      weatherCityName.textContent = `📍 ${weatherData.city}`;
+
+      // Show selected date weather or today's weather
+      let displayForecast = null;
+      if (selectedWeatherDate) {
+        displayForecast = weatherData.forecasts.find(f => f.date === selectedWeatherDate);
+      }
+
+      // If no forecast for selected date, show "no data" message
+      if (selectedWeatherDate && !displayForecast) {
+        // Selected date has no weather data (beyond 16 days)
+        weatherIcon.textContent = '❓';
+        weatherTemp.textContent = '--';
+        weatherDesc.textContent = '暂无天气情况';
+        
+        const dateObj = new Date(selectedWeatherDate + 'T00:00:00');
+        const month = dateObj.getMonth() + 1;
+        const day = dateObj.getDate();
+        const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        const weekday = weekdays[dateObj.getDay()];
+        weatherSelectedDate.textContent = `📅 ${month}月${day}日 ${weekday}`;
+        weatherSelectedDate.style.display = 'block';
+        return;
+      }
+
+      // If no selected date, show first available forecast
+      if (!displayForecast && weatherData.forecasts.length > 0) {
+        displayForecast = weatherData.forecasts[0];
+      }
+
+      if (displayForecast) {
+        weatherIcon.textContent = displayForecast.icon;
+        weatherTemp.textContent = displayForecast.temp;
+        weatherDesc.textContent = displayForecast.weather;
+
+        if (selectedWeatherDate) {
+          const dateObj = new Date(selectedWeatherDate + 'T00:00:00');
+          const month = dateObj.getMonth() + 1;
+          const day = dateObj.getDate();
+          const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+          const weekday = weekdays[dateObj.getDay()];
+          weatherSelectedDate.textContent = `📅 ${month}月${day}日 ${weekday}`;
+          weatherSelectedDate.style.display = 'block';
+        } else {
+          weatherSelectedDate.style.display = 'none';
+        }
+      }
+    }
+
+    function selectWeatherDate(dateKey) {
+      selectedWeatherDate = dateKey;
+      renderWeatherCurrent();
+
+      // Update cell selection visual
+      document.querySelectorAll('.cell--selected').forEach(cell => {
+        cell.classList.remove('cell--selected');
+      });
+
+      const cell = document.querySelector(`[data-date-key="${dateKey}"]`);
+      if (cell) {
+        cell.classList.add('cell--selected');
+      }
+    }
+
+    function getWeatherForDate(dateKey) {
+      if (!weatherData || !weatherData.forecasts) return null;
+
+      const forecast = weatherData.forecasts.find(f => f.date === dateKey);
+      return forecast || null;
+    }
+
+    function hasWeatherForDate(dateKey) {
+      return getWeatherForDate(dateKey) !== null;
+    }
+
+    function loadWeatherData() {
+      try {
+        const raw = localStorage.getItem(WEATHER_KEY);
+        const data = raw ? JSON.parse(raw) : null;
+        if (data) {
+          weatherCities = data.cities || [];
+          activeWeatherCity = data.activeCity || null;
+          selectedWeatherDate = data.selectedDate || null;
+
+          if (weatherCities.length > 0) {
+            // Load active city data
+            const activeCity = weatherCities.find(c => c.city === activeWeatherCity);
+            if (activeCity) {
+              weatherData = activeCity;
+            } else {
+              weatherData = weatherCities[0];
+              activeWeatherCity = weatherCities[0].city;
+            }
+          }
+        }
+      } catch {
+        weatherCities = [];
+        weatherData = null;
+        activeWeatherCity = null;
+      }
+    }
+
+    function saveWeatherData() {
+      const data = {
+        cities: weatherCities,
+        activeCity: activeWeatherCity,
+        selectedDate: selectedWeatherDate
+      };
+      localStorage.setItem(WEATHER_KEY, JSON.stringify(data));
+    }
+
+    function getWeatherIcon(weather) {
+      const w = weather.toLowerCase();
+      if (w.includes('晴')) return '☀️';
+      if (w.includes('多云')) return '⛅';
+      if (w.includes('阴')) return '☁️';
+      if (w.includes('小雨') || w.includes('阵雨')) return '🌦️';
+      if (w.includes('中雨')) return '🌧️';
+      if (w.includes('大雨') || w.includes('暴雨')) return '⛈️';
+      if (w.includes('雷')) return '⚡';
+      if (w.includes('雪')) return '❄️';
+      if (w.includes('雾') || w.includes('霾')) return '🌫️';
+      if (w.includes('风')) return '💨';
+      return '🌤️';
+    }
+
+    function getLunarDate(y, m, d) {
+      try {
+        if (typeof Lunar === 'undefined') {
+          console.warn('Lunar library not loaded');
+          return '';
+        }
+        const solar = Solar.fromYmd(y, m + 1, d);
+        const lunar = solar.getLunar();
+        const dayStr = lunar.getDayInChinese();
+        const monthStr = lunar.getMonthInChinese();
+        if (dayStr === '初一') {
+          return `${monthStr}月`;
+        }
+        return dayStr;
+      } catch (e) {
+        console.error('农历转换失败:', e, '日期:', y, m + 1, d);
+        return '';
+      }
+    }
+
+    function getHolidayInfo(y, m, d) {
+      const date = new Date(y, m, d);
+      const dayOfWeek = date.getDay();
+      const month = m + 1;
+      const key = `${y}-${month}-${d}`;
+      
+      // 2024-2026年中国法定节假日和调休安排
+      // 格式: 'year-month-day': { text: '显示文本', type: 'holiday'|'workday', title: '说明' }
+      const holidaySchedule = {
+        // 2024年
+        '2024-1-1': { text: '元旦', type: 'holiday', title: '元旦节' },
+        '2024-2-10': { text: '春节', type: 'holiday', title: '春节' },
+        '2024-2-11': { text: '休', type: 'holiday', title: '春节假期' },
+        '2024-2-12': { text: '休', type: 'holiday', title: '春节假期' },
+        '2024-2-13': { text: '休', type: 'holiday', title: '春节假期' },
+        '2024-2-14': { text: '休', type: 'holiday', title: '春节假期' },
+        '2024-2-15': { text: '休', type: 'holiday', title: '春节假期' },
+        '2024-2-16': { text: '休', type: 'holiday', title: '春节假期' },
+        '2024-2-17': { text: '休', type: 'holiday', title: '春节假期' },
+        '2024-2-4': { text: '班', type: 'workday', title: '春节调休' },
+        '2024-2-18': { text: '班', type: 'workday', title: '春节调休' },
+        '2024-4-4': { text: '清明', type: 'holiday', title: '清明节' },
+        '2024-4-5': { text: '休', type: 'holiday', title: '清明假期' },
+        '2024-4-6': { text: '休', type: 'holiday', title: '清明假期' },
+        '2024-4-7': { text: '班', type: 'workday', title: '清明调休' },
+        '2024-5-1': { text: '劳动', type: 'holiday', title: '劳动节' },
+        '2024-5-2': { text: '休', type: 'holiday', title: '劳动假期' },
+        '2024-5-3': { text: '休', type: 'holiday', title: '劳动假期' },
+        '2024-5-4': { text: '休', type: 'holiday', title: '劳动假期' },
+        '2024-5-5': { text: '休', type: 'holiday', title: '劳动假期' },
+        '2024-4-28': { text: '班', type: 'workday', title: '劳动调休' },
+        '2024-5-11': { text: '班', type: 'workday', title: '劳动调休' },
+        '2024-6-8': { text: '休', type: 'holiday', title: '端午假期' },
+        '2024-6-9': { text: '休', type: 'holiday', title: '端午假期' },
+        '2024-6-10': { text: '端午', type: 'holiday', title: '端午节' },
+        '2024-9-15': { text: '休', type: 'holiday', title: '中秋假期' },
+        '2024-9-16': { text: '休', type: 'holiday', title: '中秋假期' },
+        '2024-9-17': { text: '中秋', type: 'holiday', title: '中秋节' },
+        '2024-9-14': { text: '班', type: 'workday', title: '中秋调休' },
+        '2024-10-1': { text: '国庆', type: 'holiday', title: '国庆节' },
+        '2024-10-2': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2024-10-3': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2024-10-4': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2024-10-5': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2024-10-6': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2024-10-7': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2024-9-29': { text: '班', type: 'workday', title: '国庆调休' },
+        '2024-10-12': { text: '班', type: 'workday', title: '国庆调休' },
+        
+        // 2025年
+        '2025-1-1': { text: '元旦', type: 'holiday', title: '元旦节' },
+        '2025-1-28': { text: '除夕', type: 'holiday', title: '除夕' },
+        '2025-1-29': { text: '春节', type: 'holiday', title: '春节' },
+        '2025-1-30': { text: '休', type: 'holiday', title: '春节假期' },
+        '2025-1-31': { text: '休', type: 'holiday', title: '春节假期' },
+        '2025-2-1': { text: '休', type: 'holiday', title: '春节假期' },
+        '2025-2-2': { text: '休', type: 'holiday', title: '春节假期' },
+        '2025-2-3': { text: '休', type: 'holiday', title: '春节假期' },
+        '2025-2-4': { text: '休', type: 'holiday', title: '春节假期' },
+        '2025-1-26': { text: '班', type: 'workday', title: '春节调休' },
+        '2025-2-8': { text: '班', type: 'workday', title: '春节调休' },
+        '2025-4-4': { text: '清明', type: 'holiday', title: '清明节' },
+        '2025-4-5': { text: '休', type: 'holiday', title: '清明假期' },
+        '2025-4-6': { text: '休', type: 'holiday', title: '清明假期' },
+        '2025-5-1': { text: '劳动', type: 'holiday', title: '劳动节' },
+        '2025-5-2': { text: '休', type: 'holiday', title: '劳动假期' },
+        '2025-5-3': { text: '休', type: 'holiday', title: '劳动假期' },
+        '2025-5-4': { text: '休', type: 'holiday', title: '劳动假期' },
+        '2025-5-5': { text: '休', type: 'holiday', title: '劳动假期' },
+        '2025-4-27': { text: '班', type: 'workday', title: '劳动调休' },
+        '2025-5-9': { text: '班', type: 'workday', title: '劳动调休' },
+        '2025-5-31': { text: '休', type: 'holiday', title: '端午假期' },
+        '2025-6-1': { text: '休', type: 'holiday', title: '端午假期' },
+        '2025-6-2': { text: '端午', type: 'holiday', title: '端午节' },
+        '2025-10-1': { text: '国庆', type: 'holiday', title: '国庆节' },
+        '2025-10-2': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2025-10-3': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2025-10-4': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2025-10-5': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2025-10-6': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2025-10-7': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2025-10-8': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2025-9-28': { text: '班', type: 'workday', title: '国庆调休' },
+        '2025-10-11': { text: '班', type: 'workday', title: '国庆调休' },
+        
+        // 2026年
+        '2026-1-1': { text: '元旦', type: 'holiday', title: '元旦节' },
+        '2026-1-2': { text: '休', type: 'holiday', title: '元旦假期' },
+        '2026-1-3': { text: '休', type: 'holiday', title: '元旦假期' },
+        '2026-2-14': { text: '除夕', type: 'holiday', title: '除夕' },
+        '2026-2-15': { text: '春节', type: 'holiday', title: '春节' },
+        '2026-2-16': { text: '休', type: 'holiday', title: '春节假期' },
+        '2026-2-17': { text: '休', type: 'holiday', title: '春节假期' },
+        '2026-2-18': { text: '休', type: 'holiday', title: '春节假期' },
+        '2026-2-19': { text: '休', type: 'holiday', title: '春节假期' },
+        '2026-2-20': { text: '休', type: 'holiday', title: '春节假期' },
+        '2026-2-21': { text: '休', type: 'holiday', title: '春节假期' },
+        '2026-2-7': { text: '班', type: 'workday', title: '春节调休' },
+        '2026-2-28': { text: '班', type: 'workday', title: '春节调休' },
+        '2026-4-4': { text: '清明', type: 'holiday', title: '清明节' },
+        '2026-4-5': { text: '休', type: 'holiday', title: '清明假期' },
+        '2026-4-6': { text: '休', type: 'holiday', title: '清明假期' },
+        '2026-5-1': { text: '劳动', type: 'holiday', title: '劳动节' },
+        '2026-5-2': { text: '休', type: 'holiday', title: '劳动假期' },
+        '2026-5-3': { text: '休', type: 'holiday', title: '劳动假期' },
+        '2026-5-4': { text: '休', type: 'holiday', title: '劳动假期' },
+        '2026-5-5': { text: '休', type: 'holiday', title: '劳动假期' },
+        '2026-4-26': { text: '班', type: 'workday', title: '劳动调休' },
+        '2026-5-9': { text: '班', type: 'workday', title: '劳动调休' },
+        '2026-6-19': { text: '端午', type: 'holiday', title: '端午节' },
+        '2026-6-20': { text: '休', type: 'holiday', title: '端午假期' },
+        '2026-6-21': { text: '休', type: 'holiday', title: '端午假期' },
+        '2026-10-1': { text: '国庆', type: 'holiday', title: '国庆节' },
+        '2026-10-2': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2026-10-3': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2026-10-4': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2026-10-5': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2026-10-6': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2026-10-7': { text: '休', type: 'holiday', title: '国庆假期' },
+        '2026-10-10': { text: '班', type: 'workday', title: '国庆调休' },
+      };
+      
+      // 检查是否有特殊安排（节假日或调休）
+      if (holidaySchedule[key]) {
+        return holidaySchedule[key];
+      }
+      
+      // 普通周末标注
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        return {
+          text: '休',
+          type: 'weekend',
+          title: dayOfWeek === 0 ? '星期日' : '星期六'
+        };
+      }
+      
+      // 工作日标注
+      return {
+        text: '班',
+        type: 'workday',
+        title: '工作日'
+      };
+    }
+
+    function calculateDaysUntil(dateStr, type) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const target = new Date(dateStr + 'T00:00:00');
+      target.setHours(0, 0, 0, 0);
+
+      if (type === 'once') {
+        const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+        return diff;
+      }
+
+      // For yearly recurring
+      const currentYear = today.getFullYear();
+      const targetMonth = target.getMonth();
+      const targetDay = target.getDate();
+
+      let nextOccurrence = new Date(currentYear, targetMonth, targetDay);
+      if (nextOccurrence < today) {
+        nextOccurrence = new Date(currentYear + 1, targetMonth, targetDay);
+      }
+
+      const diff = Math.ceil((nextOccurrence - today) / (1000 * 60 * 60 * 24));
+      return diff;
+    }
+
+    function formatCountdown(days) {
+      if (days === 0) return '🎊 今天！';
+      if (days > 0) return `还有 ${days} 天`;
+      return `已过 ${Math.abs(days)} 天`;
+    }
+
+    function renderAnniversaries() {
+      anniversaryListEl.innerHTML = '';
+
+      if (anniversaries.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-anniversary';
+        empty.textContent = '暂无纪念日，点击右上角 + 添加';
+        anniversaryListEl.appendChild(empty);
+        return;
+      }
+
+      // Sort by days until (ascending)
+      const sorted = [...anniversaries].map(a => {
+        const days = calculateDaysUntil(a.date, a.type);
+        return { ...a, days };
+      }).sort((a, b) => a.days - b.days);
+
+      for (const ann of sorted) {
+        const item = document.createElement('div');
+        item.className = 'anniversary-item';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'anniversary-name';
+        nameEl.textContent = ann.name;
+
+        const dateEl = document.createElement('div');
+        dateEl.className = 'anniversary-date';
+        const dateObj = new Date(ann.date + 'T00:00:00');
+        dateEl.textContent = `${dateObj.getFullYear()}年${dateObj.getMonth() + 1}月${dateObj.getDate()}日`;
+
+        const countdownEl = document.createElement('div');
+        countdownEl.className = 'anniversary-countdown';
+        if (ann.days === 0) {
+          countdownEl.classList.add('is-today');
+        } else if (ann.days < 0 && ann.type === 'once') {
+          countdownEl.classList.add('is-past');
+        }
+        countdownEl.textContent = formatCountdown(ann.days);
+
+        const actionsEl = document.createElement('div');
+        actionsEl.className = 'anniversary-actions';
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-delete-anniversary';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.title = '删除';
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm(`确定删除「${ann.name}」吗？`)) {
+            anniversaries = anniversaries.filter(a => a.id !== ann.id);
+            saveAnniversaries();
+            renderAnniversaries();
+          }
+        });
+        actionsEl.appendChild(deleteBtn);
+
+        item.appendChild(nameEl);
+        item.appendChild(dateEl);
+        item.appendChild(countdownEl);
+        item.appendChild(actionsEl);
+
+        // Click to navigate to that date
+        item.addEventListener('click', () => {
+          const dateObj = new Date(ann.date + 'T00:00:00');
+          viewYear = dateObj.getFullYear();
+          viewMonth = dateObj.getMonth();
+          renderMonth();
+        });
+
+        anniversaryListEl.appendChild(item);
+      }
+    }
+
+    function openAnniversaryModal() {
+      if (!anniversaryModal || !anniversaryNameInput || !anniversaryDateInput) return;
+      anniversaryNameInput.value = '';
+      anniversaryDateInput.value = '';
+      anniversaryTypeSelect.value = 'yearly';
+      anniversaryModal.classList.add('is-open');
+      anniversaryModal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => anniversaryNameInput.focus(), 100);
+    }
+
+    function closeAnniversaryModal() {
+      if (!anniversaryModal) return;
+      anniversaryModal.classList.remove('is-open');
+      anniversaryModal.setAttribute('aria-hidden', 'true');
+    }
+
+    // ========== Countdown Functions ==========
+    const COUNTDOWN_KEY = "countdownData_v1";
+    /** @type {Array<{id: string, name: string, targetDate: string}>} */
+    let countdowns = [];
+    let countdownModal, countdownNameInput, countdownDateInput;
+    let saveCountdownBtn, cancelCountdownBtn, addCountdownBtn, countdownListEl;
+    let countdownTimerInterval = null;
+
+    function loadCountdowns() {
+      try {
+        const raw = localStorage.getItem(COUNTDOWN_KEY);
+        countdowns = raw ? JSON.parse(raw) : [];
+      } catch {
+        countdowns = [];
+      }
+    }
+
+    function saveCountdowns() {
+      localStorage.setItem(COUNTDOWN_KEY, JSON.stringify(countdowns));
+    }
+
+    function calculateCountdownDetail(targetDate) {
+      const now = new Date();
+      const target = new Date(targetDate + 'T00:00:00');
+      const diffTime = target - now;
+      
+      const isPast = diffTime < 0;
+      const absDiff = Math.abs(diffTime);
+      
+      const days = Math.floor(absDiff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((absDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((absDiff % (1000 * 60)) / 1000);
+      
+      return {
+        isPast,
+        days,
+        hours,
+        minutes,
+        seconds,
+        totalSeconds: Math.floor(absDiff / 1000)
+      };
+    }
+
+    function formatCountdownDetail(detail) {
+      if (detail.totalSeconds === 0) {
+        return '今天！';
+      }
+      
+      const prefix = detail.isPast ? '已过' : '还剩';
+      const parts = [];
+      
+      if (detail.days > 0) {
+        parts.push(`${detail.days}天`);
+      }
+      if (detail.hours > 0 || detail.days > 0) {
+        parts.push(`${detail.hours}时`);
+      }
+      if (detail.minutes > 0 || detail.hours > 0 || detail.days > 0) {
+        parts.push(`${detail.minutes}分`);
+      }
+      parts.push(`${detail.seconds}秒`);
+      
+      return `${prefix}${parts.join('')}`;
+    }
+
+    function renderCountdowns() {
+      if (!countdownListEl) return;
+      countdownListEl.innerHTML = '';
+
+      if (countdowns.length === 0) {
+        const emptyEl = document.createElement('div');
+        emptyEl.className = 'empty-countdown';
+        emptyEl.textContent = '暂无倒计时，点击右上角 + 添加';
+        countdownListEl.appendChild(emptyEl);
+        return;
+      }
+
+      // Calculate details for each countdown
+      const countdownsWithDetails = countdowns.map(c => ({
+        ...c,
+        detail: calculateCountdownDetail(c.targetDate)
+      })).sort((a, b) => a.detail.totalSeconds - b.detail.totalSeconds);
+
+      for (const cd of countdownsWithDetails) {
+        const item = document.createElement('div');
+        item.className = 'countdown-item';
+        item.dataset.countdownId = cd.id;
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'countdown-name';
+        nameEl.textContent = cd.name;
+
+        const dateObj = new Date(cd.targetDate + 'T00:00:00');
+        const month = dateObj.getMonth() + 1;
+        const day = dateObj.getDate();
+        const dateEl = document.createElement('div');
+        dateEl.className = 'countdown-date';
+        dateEl.textContent = `${month}月${day}日`;
+
+        const valueEl = document.createElement('div');
+        valueEl.className = 'countdown-value';
+        valueEl.dataset.countdownValue = cd.id;
+        if (cd.detail.isPast) {
+          valueEl.classList.add('is-past');
+        }
+        valueEl.textContent = formatCountdownDetail(cd.detail);
+
+        const actionsEl = document.createElement('div');
+        actionsEl.className = 'countdown-actions';
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-delete-countdown';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.title = '删除';
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm(`确定删除「${cd.name}」吗？`)) {
+            countdowns = countdowns.filter(c => c.id !== cd.id);
+            saveCountdowns();
+            renderCountdowns();
+            startCountdownTimer(); // Restart timer after deletion
+          }
+        });
+        actionsEl.appendChild(deleteBtn);
+
+        item.appendChild(nameEl);
+        item.appendChild(dateEl);
+        item.appendChild(valueEl);
+        item.appendChild(actionsEl);
+
+        item.addEventListener('click', () => {
+          viewYear = dateObj.getFullYear();
+          viewMonth = dateObj.getMonth();
+          renderMonth();
+        });
+
+        countdownListEl.appendChild(item);
+      }
+
+      // Start the timer to update countdowns
+      startCountdownTimer();
+    }
+
+    function startCountdownTimer() {
+      // Clear existing timer
+      if (countdownTimerInterval) {
+        clearInterval(countdownTimerInterval);
+      }
+
+      // Update every second
+      countdownTimerInterval = setInterval(() => {
+        if (!countdownListEl || countdowns.length === 0) return;
+
+        countdowns.forEach(cd => {
+          const valueEl = countdownListEl.querySelector(`[data-countdown-value="${cd.id}"]`);
+          if (valueEl) {
+            const detail = calculateCountdownDetail(cd.targetDate);
+            valueEl.textContent = formatCountdownDetail(detail);
+            
+            // Update is-past class
+            if (detail.isPast) {
+              valueEl.classList.add('is-past');
+            } else {
+              valueEl.classList.remove('is-past');
+            }
+          }
+        });
+      }, 1000);
+    }
+
+    function openCountdownModal() {
+      if (!countdownModal || !countdownNameInput || !countdownDateInput) return;
+      countdownNameInput.value = '';
+      countdownDateInput.value = '';
+      countdownModal.classList.add('is-open');
+      countdownModal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => countdownNameInput.focus(), 100);
+    }
+
+    function closeCountdownModal() {
+      if (!countdownModal) return;
+      countdownModal.classList.remove('is-open');
+      countdownModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function handleSaveCountdown() {
+      if (!countdownNameInput || !countdownDateInput) return;
+      const name = countdownNameInput.value.trim();
+      const targetDate = countdownDateInput.value;
+
+      if (!name) {
+        alert('请输入名称');
+        return;
+      }
+      if (!targetDate) {
+        alert('请选择目标日期');
+        return;
+      }
+
+      const newCountdown = {
+        id: crypto.randomUUID ? crypto.randomUUID() : `cd-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        name: name,
+        targetDate: targetDate
+      };
+
+      countdowns.push(newCountdown);
+      saveCountdowns();
+      renderCountdowns();
+      closeCountdownModal();
+    }
+
+    function saveStore() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    }
+
+    function pad(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function dateKey(y, m, d) {
+      return `${y}-${pad(m + 1)}-${pad(d)}`;
+    }
+
+    function parseKey(key) {
+      const [y, mo, da] = key.split("-").map(Number);
+      return { y, mo: mo - 1, da };
+    }
+
+    function formatDialogTitle(key) {
+      const { y, mo, da } = parseKey(key);
+      const w = ["日", "一", "二", "三", "四", "五", "六"];
+      const dt = new Date(y, mo, da);
+      const weekday = w[dt.getDay()];
+      return `${y}年${mo + 1}月${da}日 周${weekday}`;
+    }
+
+    /** Monday = 0 … Sunday = 6 */
+    function mondayIndex(dayJs) {
+      const d = dayJs.getDay();
+      return d === 0 ? 6 : d - 1;
+    }
+
+    function isToday(y, m, d) {
+      const t = new Date();
+      return t.getFullYear() === y && t.getMonth() === m && t.getDate() === d;
+    }
+
+    function getEntry(key) {
+      return store[key] || {};
+    }
+
+    function setBackgroundImageToCell(btn, imageDataUrl) {
+      if (imageDataUrl) {
+        btn.style.backgroundImage = `url(${imageDataUrl})`;
+        // Add indicator
+        let indicator = btn.querySelector('.cell-bg-indicator');
+        if (!indicator) {
+          indicator = document.createElement('div');
+          indicator.className = 'cell-bg-indicator';
+          indicator.innerHTML = '🖼';
+          indicator.title = '已设置背景图片';
+          const head = btn.querySelector('.cell-head');
+          if (head) {
+            head.parentNode.insertBefore(indicator, head.nextSibling);
+          }
+        }
+      } else {
+        btn.style.backgroundImage = '';
+        const indicator = btn.querySelector('.cell-bg-indicator');
+        if (indicator) {
+          indicator.remove();
+        }
+      }
+    }
+
+    function renderMonth() {
+      const y = viewYear;
+      const m = viewMonth;
+      
+      // Update month picker value
+      if (monthPicker) {
+        const yearStr = String(y);
+        const monthStr = String(m + 1).padStart(2, '0');
+        monthPicker.value = `${yearStr}-${monthStr}`;
+      }
+
+      const first = new Date(y, m, 1);
+      const last = new Date(y, m + 1, 0);
+      const daysInMonth = last.getDate();
+      const startPad = mondayIndex(first);
+
+      grid.innerHTML = "";
+      const totalCells = Math.ceil((startPad + daysInMonth) / 7) * 7;
+
+      for (let i = 0; i < totalCells; i++) {
+        const dayNum = i - startPad + 1;
+        const isEmpty = dayNum < 1 || dayNum > daysInMonth;
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "cell";
+        btn.setAttribute("role", "gridcell");
+
+        if (isEmpty) {
+          btn.classList.add("cell--empty");
+          btn.disabled = true;
+          btn.setAttribute("aria-hidden", "true");
+        } else {
+          const key = dateKey(y, m, dayNum);
+          const entry = getEntry(key);
+          const checked = !!entry.checked;
+          const noteText = (entry.note || "").trim();
+          const isFuture = new Date(y, m, dayNum) > new Date(new Date().setHours(23, 59, 59, 999));
+
+          btn.dataset.dateKey = key;
+          if (checked) btn.classList.add("cell--checked");
+          if (isToday(y, m, dayNum)) btn.classList.add("cell--today");
+          if (isFuture) btn.classList.add("cell--future");
+
+          // Highlight selected date
+          if (selectedWeatherDate === key) {
+            btn.classList.add("cell--selected");
+          }
+
+          // Set background image if exists
+          if (entry.bgImage) {
+            setBackgroundImageToCell(btn, entry.bgImage);
+          }
+
+          const head = document.createElement("div");
+          head.className = "cell-head";
+
+          const dayEl = document.createElement("span");
+          dayEl.className = "cell-day";
+          dayEl.textContent = String(dayNum);
+          head.appendChild(dayEl);
+
+          // Add weather icon - show for ALL dates that have weather data
+          const weatherInfo = getWeatherForDate(key);
+          if (weatherInfo) {
+            const weatherIconEl = document.createElement("div");
+            weatherIconEl.className = "weather-icon-cell";
+            weatherIconEl.textContent = weatherInfo.icon || '🌤️';
+            weatherIconEl.title = `${weatherInfo.weather || '未知'} ${weatherInfo.temp || ''}`;
+            head.appendChild(weatherIconEl);
+          }
+
+          // Add lunar date - show for ALL dates
+          try {
+            const lunarDate = getLunarDate(y, m, dayNum);
+            if (lunarDate) {
+              const lunarEl = document.createElement("div");
+              lunarEl.className = "lunar-date";
+              lunarEl.textContent = lunarDate;
+              head.appendChild(lunarEl);
+            }
+          } catch (e) {
+            console.error('显示农历失败:', e);
+          }
+
+          // Add holiday/workday indicator
+          const holidayInfo = getHolidayInfo(y, m, dayNum);
+          if (holidayInfo) {
+            const holidayEl = document.createElement("div");
+            holidayEl.className = `holiday-indicator ${holidayInfo.type}`;
+            holidayEl.textContent = holidayInfo.text;
+            holidayEl.title = holidayInfo.title;
+            head.appendChild(holidayEl);
+          }
+
+          const status = document.createElement("div");
+          status.className = "cell-status";
+          if (checked) {
+            const dot = document.createElement("span");
+            dot.className = "dot";
+            dot.title = "已打卡";
+            status.appendChild(dot);
+          }
+          const fileCount = (entry.files || []).length;
+          if (fileCount > 0) {
+            const fb = document.createElement("span");
+            fb.className = "cell-file-badge";
+            fb.textContent = fileCount > 99 ? "99+" : String(fileCount);
+            fb.title = `${fileCount} 个附件`;
+            status.appendChild(fb);
+          }
+          head.appendChild(status);
+          btn.appendChild(head);
+
+          if (noteText || fileCount > 0) {
+            const preview = document.createElement("div");
+            preview.className = "cell-note-preview";
+            if (noteText) {
+              preview.textContent = noteText;
+              preview.title = noteText;
+            } else {
+              preview.textContent = `${fileCount} 个附件`;
+              preview.title = "仅有附件，无文字备注";
+            }
+            // Don't stop propagation - let the whole cell be clickable
+            btn.appendChild(preview);
+          }
+
+          // Click and double-click handlers
+          let clickTimer = null;
+          
+          btn.addEventListener("click", (e) => {
+            // Prevent default behavior
+            e.preventDefault();
+            
+            if (clickTimer) {
+              // Double click detected - clear timer and open dialog
+              clearTimeout(clickTimer);
+              clickTimer = null;
+              
+              if (!isFuture) {
+                openDialog(key);
+              } else {
+                alert("未来的日期暂不支持编辑");
+              }
+            } else {
+              // Single click - wait to see if it's a double click
+              clickTimer = setTimeout(() => {
+                clickTimer = null;
+                selectWeatherDate(key);
+              }, 250); // 250ms delay to detect double click
+            }
+          });
+        }
+        grid.appendChild(btn);
+      }
+    }
+
+    function revokeDialogPreviews() {
+      for (const p of dialogPendingFiles) {
+        if (p.previewUrl) {
+          URL.revokeObjectURL(p.previewUrl);
+          p.previewUrl = undefined;
+        }
+      }
+    }
+
+    function isImageType(t) {
+      return typeof t === "string" && t.startsWith("image/");
+    }
+
+    function renderDialogFiles() {
+      fileListEl.innerHTML = "";
+
+      for (const meta of dialogExistingFiles) {
+        if (dialogRemovedIds.has(meta.id)) continue;
+        const row = document.createElement("div");
+        row.className = "file-row";
+
+        const icon = document.createElement("div");
+        icon.className = "file-row__icon";
+        icon.textContent = isImageType(meta.type) ? "🖼" : isHtmlMime(meta.type) ? "📝" : "📄";
+        icon.style.cursor = "pointer";
+        icon.title = "点击预览";
+        icon.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          try {
+            const rec = await idbGet(meta.id);
+            if (!rec?.blob) {
+              alert("文件未找到，可能已被清除。");
+              return;
+            }
+            await openAttachmentPreview(rec.blob, rec.name || meta.name, meta.type);
+          } catch (err) {
+            console.error(err);
+            alert("预览失败，请重试。");
+          }
+        });
+        row.appendChild(icon);
+
+        const m = document.createElement("div");
+        m.className = "file-row__meta";
+        const nameEl = document.createElement("div");
+        nameEl.className = "file-row__name";
+        nameEl.textContent = meta.name;
+        const sizeEl = document.createElement("div");
+        sizeEl.className = "file-row__size";
+        sizeEl.textContent = formatSize(meta.size);
+        m.appendChild(nameEl);
+        m.appendChild(sizeEl);
+        row.appendChild(m);
+
+        const actions = document.createElement("div");
+        actions.className = "file-row__actions";
+
+        const pv = document.createElement("button");
+        pv.type = "button";
+        pv.textContent = "预览";
+        pv.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          try {
+            const rec = await idbGet(meta.id);
+            if (!rec?.blob) {
+              alert("文件未找到，可能已被清除。");
+              return;
+            }
+            await openAttachmentPreview(rec.blob, rec.name || meta.name, meta.type);
+          } catch (err) {
+            console.error(err);
+            alert("预览失败，请重试。");
+          }
+        });
+
+        const dl = document.createElement("button");
+        dl.type = "button";
+        dl.textContent = "下载";
+        dl.addEventListener("click", async () => {
+          try {
+            const rec = await idbGet(meta.id);
+            if (!rec?.blob) {
+              alert("文件未找到，可能已被清除。");
+              return;
+            }
+            const u = URL.createObjectURL(rec.blob);
+            const a = document.createElement("a");
+            a.href = u;
+            a.download = rec.name || meta.name;
+            a.click();
+            URL.revokeObjectURL(u);
+          } catch (e) {
+            alert("下载失败，请重试。");
+          }
+        });
+
+        const rm = document.createElement("button");
+        rm.type = "button";
+        rm.className = "danger";
+        rm.textContent = "移除";
+        rm.addEventListener("click", () => {
+          dialogRemovedIds.add(meta.id);
+          renderDialogFiles();
+        });
+
+        actions.appendChild(pv);
+        actions.appendChild(dl);
+        actions.appendChild(rm);
+        row.appendChild(actions);
+        fileListEl.appendChild(row);
+      }
+
+      for (const p of dialogPendingFiles) {
+        const row = document.createElement("div");
+        row.className = "file-row";
+
+        if (isImageType(p.file.type)) {
+          const img = document.createElement("img");
+          img.className = "file-row__thumb";
+          img.alt = "";
+          img.title = "点击预览";
+          img.src = p.previewUrl || (p.previewUrl = URL.createObjectURL(p.file));
+          img.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openAttachmentPreview(p.file, p.file.name, p.file.type);
+          });
+          row.appendChild(img);
+        } else {
+          const icon = document.createElement("div");
+          icon.className = "file-row__icon";
+          icon.textContent = isHtmlMime(p.file.type) ? "📝" : "📄";
+          icon.style.cursor = "pointer";
+          icon.title = "点击预览";
+          icon.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openAttachmentPreview(p.file, p.file.name, p.file.type);
+          });
+          row.appendChild(icon);
+        }
+
+        const m = document.createElement("div");
+        m.className = "file-row__meta";
+        const nameEl = document.createElement("div");
+        nameEl.className = "file-row__name";
+        nameEl.textContent = p.file.name;
+        const sizeEl = document.createElement("div");
+        sizeEl.className = "file-row__size";
+        sizeEl.textContent = `${formatSize(p.file.size)} · 待保存`;
+        m.appendChild(nameEl);
+        m.appendChild(sizeEl);
+        row.appendChild(m);
+
+        const actions = document.createElement("div");
+        actions.className = "file-row__actions";
+
+        const pv2 = document.createElement("button");
+        pv2.type = "button";
+        pv2.textContent = "预览";
+        pv2.addEventListener("click", (e) => {
+          e.stopPropagation();
+          openAttachmentPreview(p.file, p.file.name, p.file.type);
+        });
+
+        const rm = document.createElement("button");
+        rm.type = "button";
+        rm.className = "danger";
+        rm.textContent = "移除";
+        rm.addEventListener("click", () => {
+          if (p.previewUrl) {
+            URL.revokeObjectURL(p.previewUrl);
+            p.previewUrl = undefined;
+          }
+          const i = dialogPendingFiles.indexOf(p);
+          if (i !== -1) dialogPendingFiles.splice(i, 1);
+          renderDialogFiles();
+        });
+        actions.appendChild(pv2);
+        actions.appendChild(rm);
+        row.appendChild(actions);
+        fileListEl.appendChild(row);
+      }
+
+      if (fileListEl.children.length === 0) {
+        const empty = document.createElement("p");
+        empty.style.cssText = "margin:0;font-size:0.78rem;color:#94a3b8;text-align:center;padding:0.5rem;";
+        empty.textContent = "暂无附件";
+        fileListEl.appendChild(empty);
+      }
+    }
+
+    function dialogFileCount() {
+      const kept = dialogExistingFiles.filter((f) => !dialogRemovedIds.has(f.id)).length;
+      return kept + dialogPendingFiles.length;
+    }
+
+    function rteIsEmpty() {
+      const t = rteEditor.textContent || "";
+      return t.replace(/\u00a0/g, " ").trim() === "";
+    }
+
+    function rteExec(cmd, val) {
+      rteEditor.focus();
+      try {
+        document.execCommand(cmd, false, val);
+      } catch (_) {}
+    }
+
+    function closeRteSilent() {
+      rteBackdrop.classList.remove("is-open");
+      rteBackdrop.setAttribute("aria-hidden", "true");
+      rteEditor.innerHTML = "";
+      rteDocTitle.value = "";
+    }
+
+    function closeRteEditor() {
+      if (!rteBackdrop.classList.contains("is-open")) return;
+      const dirty = !rteIsEmpty() || rteDocTitle.value.trim().length > 0;
+      if (dirty && !confirm("确定关闭？未保存的富文本将丢失。")) return;
+      closeRteSilent();
+    }
+
+    function openRteEditor() {
+      if (!selectedKey) {
+        alert("请先点击日历中的某一天，再添加附件。");
+        return;
+      }
+      if (dialogFileCount() >= MAX_FILES_PER_DAY) {
+        alert(`已达到每天最多 ${MAX_FILES_PER_DAY} 个附件。`);
+        return;
+      }
+      rteDocTitle.value = "";
+      rteEditor.innerHTML = "";
+      rteBackdrop.classList.add("is-open");
+      rteBackdrop.setAttribute("aria-hidden", "false");
+      setTimeout(() => rteEditor.focus(), 80);
+    }
+
+    function saveRteAsAttachment() {
+      if (!selectedKey) return;
+      if (rteIsEmpty()) {
+        alert("请先输入富文本内容。");
+        rteEditor.focus();
+        return;
+      }
+      if (dialogFileCount() >= MAX_FILES_PER_DAY) {
+        alert(`已达到每天最多 ${MAX_FILES_PER_DAY} 个附件。`);
+        return;
+      }
+      const displayTitle = rteDocTitle.value.trim() || "富文本笔记";
+      const stem = slugifyFileStem(rteDocTitle.value, selectedKey);
+      const filename = `${stem}.html`;
+      const inner = rteEditor.innerHTML;
+      const doc = buildRichTextDocument(inner, displayTitle);
+      const blob = new Blob([doc], { type: "text/html;charset=utf-8" });
+      if (blob.size > MAX_FILE_SIZE) {
+        alert("内容过大，请删减后重试（单附件不超过 15MB）。");
+        return;
+      }
+      const file = new File([blob], filename, { type: "text/html", lastModified: Date.now() });
+      dialogPendingFiles.push({ tempId: newId(), file });
+      closeRteSilent();
+      renderDialogFiles();
+    }
+
+    function openDialog(key) {
+      selectedKey = key;
+      const entry = getEntry(key);
+      checkIn.checked = !!entry.checked;
+      note.value = entry.note || "";
+      dialogExistingFiles = [...(entry.files || [])];
+      dialogRemovedIds = new Set();
+      dialogPendingFiles = [];
+
+      // Load background image
+      currentBgImageDataUrl = entry.bgImage || null;
+      if (currentBgImageDataUrl) {
+        bgPreviewImg.src = currentBgImageDataUrl;
+        bgPreviewContainer.style.display = 'block';
+        bgPreviewActions.style.display = 'flex';
+      } else {
+        bgPreviewContainer.style.display = 'none';
+        bgPreviewActions.style.display = 'none';
+        bgPreviewImg.src = '';
+      }
+
+      renderDialogFiles();
+      dialogTitle.textContent = formatDialogTitle(key);
+      backdrop.classList.add("is-open");
+      backdrop.setAttribute("aria-hidden", "false");
+      note.focus();
+    }
+
+    function closeDialog() {
+      closeAttachmentPreview();
+      if (rteBackdrop.classList.contains("is-open")) {
+        const dirty = !rteIsEmpty() || rteDocTitle.value.trim().length > 0;
+        if (dirty && !confirm("富文本编辑器中有未保存内容，关闭将丢失。是否仍关闭？")) {
+          return;
+        }
+        closeRteSilent();
+      }
+      revokeDialogPreviews();
+      dialogPendingFiles = [];
+      dialogRemovedIds = new Set();
+      dialogExistingFiles = [];
+      fileListEl.innerHTML = "";
+
+      // Reset background image preview
+      currentBgImageDataUrl = null;
+      bgPreviewContainer.style.display = 'none';
+      bgPreviewActions.style.display = 'none';
+      bgPreviewImg.src = '';
+      bgImageInput.value = '';
+
+      backdrop.classList.remove("is-open");
+      backdrop.setAttribute("aria-hidden", "true");
+      selectedKey = null;
+      fileInput.value = "";
+      saveDayBtn.disabled = false;
+
+      // Re-render to update selection state
+      renderMonth();
+    }
+
+    async function saveDay() {
+      if (!selectedKey) return;
+      if (previewBackdrop.classList.contains("is-open")) {
+        alert("请先关闭附件预览窗口，再保存当天。");
+        return;
+      }
+      if (rteBackdrop.classList.contains("is-open")) {
+        alert("请先处理富文本：点击「保存为附件」加入列表，或关闭编辑器后再保存当天。");
+        return;
+      }
+      const checked = checkIn.checked;
+      const noteText = note.value.trim();
+
+      const keptMeta = dialogExistingFiles.filter((f) => !dialogRemovedIds.has(f.id));
+      const total = keptMeta.length + dialogPendingFiles.length;
+      if (total > MAX_FILES_PER_DAY) {
+        alert(`每天最多 ${MAX_FILES_PER_DAY} 个附件。`);
+        return;
+      }
+
+      saveDayBtn.disabled = true;
+      try {
+        const oldEntry = getEntry(selectedKey);
+        const oldIds = new Set((oldEntry.files || []).map((f) => f.id));
+
+        const newMetas = [];
+        for (const p of dialogPendingFiles) {
+          const id = newId();
+          await idbPut({
+            id,
+            dateKey: selectedKey,
+            name: p.file.name,
+            type: p.file.type || "application/octet-stream",
+            size: p.file.size,
+            blob: p.file,
+          });
+          newMetas.push({
+            id,
+            name: p.file.name,
+            type: p.file.type || "",
+            size: p.file.size,
+          });
+        }
+
+        const finalFiles = [...keptMeta, ...newMetas];
+        const newIdSet = new Set(finalFiles.map((f) => f.id));
+        const toDelete = [...oldIds].filter((id) => !newIdSet.has(id));
+        await idbDeleteMany(toDelete);
+
+        if (!checked && !noteText && finalFiles.length === 0 && !currentBgImageDataUrl) {
+          delete store[selectedKey];
+        } else {
+          /** @type {{ checked: boolean, note?: string, files?: FileMeta[], bgImage?: string }} */
+          const next = { checked };
+          if (noteText) next.note = noteText;
+          if (finalFiles.length) next.files = finalFiles;
+          if (currentBgImageDataUrl) next.bgImage = currentBgImageDataUrl;
+          store[selectedKey] = next;
+        }
+
+        saveStore();
+        revokeDialogPreviews();
+        dialogPendingFiles = [];
+        renderMonth();
+        closeDialog();
+      } catch (e) {
+        console.error(e);
+        alert("保存失败（含附件写入）。请重试或检查浏览器是否允许本站使用存储。");
+      } finally {
+        saveDayBtn.disabled = false;
+      }
+    }
+
+    function initEventListeners() {
+      pickFilesBtn.addEventListener("click", () => fileInput.click());
+
+      openRteBtn.addEventListener("click", () => openRteEditor());
+
+      rteCancelBtn.addEventListener("click", () => closeRteEditor());
+
+      rteSaveAttachBtn.addEventListener("click", () => saveRteAsAttachment());
+
+      rteBackdrop.addEventListener("click", (e) => {
+        if (e.target === rteBackdrop) closeRteEditor();
+      });
+
+      rteToolbar.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-cmd]");
+        if (!btn) return;
+        e.preventDefault();
+        const cmd = btn.getAttribute("data-cmd");
+        const val = btn.getAttribute("data-val");
+        rteExec(cmd, val || undefined);
+      });
+
+      rteLinkBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const url = prompt("请输入链接地址（含 https://）", "https://");
+        if (url === null) return;
+        const u = url.trim();
+        if (u) rteExec("createLink", u);
+      });
+
+      fileInput.addEventListener("change", () => {
+        const files = Array.from(fileInput.files || []);
+        fileInput.value = "";
+        let added = 0;
+        for (const file of files) {
+          if (file.size > MAX_FILE_SIZE) {
+            alert(`「${file.name}」超过 15MB，已跳过。`);
+            continue;
+          }
+          if (dialogFileCount() >= MAX_FILES_PER_DAY) {
+            alert(`已达到每天最多 ${MAX_FILES_PER_DAY} 个附件。`);
+            break;
+          }
+          dialogPendingFiles.push({ tempId: newId(), file });
+          added++;
+        }
+        if (added) renderDialogFiles();
+      });
+
+      document.getElementById("prevMonth").addEventListener("click", () => {
+        viewMonth--;
+        if (viewMonth < 0) {
+          viewMonth = 11;
+          viewYear--;
+        }
+        renderMonth();
+      });
+
+      document.getElementById("nextMonth").addEventListener("click", () => {
+        viewMonth++;
+        if (viewMonth > 11) {
+          viewMonth = 0;
+          viewYear++;
+        }
+        renderMonth();
+      });
+
+      // Month picker change handler
+      if (monthPicker) {
+        // Make the entire input clickable to open the picker
+        monthPicker.addEventListener("click", (e) => {
+          // Show the native picker on any click
+          monthPicker.showPicker();
+        });
+
+        monthPicker.addEventListener("change", (e) => {
+          const value = e.target.value;
+          if (!value) return;
+          
+          const [yearStr, monthStr] = value.split('-');
+          const newYear = parseInt(yearStr, 10);
+          const newMonth = parseInt(monthStr, 10) - 1; // Convert to 0-based
+          
+          if (!isNaN(newYear) && !isNaN(newMonth)) {
+            viewYear = newYear;
+            viewMonth = newMonth;
+            renderMonth();
+          }
+        });
+      }
+
+      document.getElementById("closeDialog").addEventListener("click", closeDialog);
+      saveDayBtn.addEventListener("click", () => saveDay());
+
+      checkRow.addEventListener("click", (e) => {
+        if (e.target !== checkIn) checkIn.click();
+      });
+
+      backdrop.addEventListener("click", (e) => {
+        if (e.target === backdrop) closeDialog();
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape") return;
+        if (previewBackdrop.classList.contains("is-open")) {
+          e.preventDefault();
+          closeAttachmentPreview();
+          return;
+        }
+        if (rteBackdrop.classList.contains("is-open")) {
+          e.preventDefault();
+          closeRteEditor();
+          return;
+        }
+        if (backdrop.classList.contains("is-open")) {
+          e.preventDefault();
+          closeDialog();
+        }
+      });
+
+      previewCloseBtn.addEventListener("click", () => closeAttachmentPreview());
+
+      previewBackdrop.addEventListener("click", (e) => {
+        if (e.target === previewBackdrop) closeAttachmentPreview();
+      });
+
+      // Background image handlers
+      pickBgImageBtn.addEventListener('click', () => bgImageInput.click());
+
+      bgImageInput.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+          alert('请选择图片文件');
+          return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+          alert('图片大小不能超过 5MB');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          currentBgImageDataUrl = event.target.result;
+          bgPreviewImg.src = currentBgImageDataUrl;
+          bgPreviewContainer.style.display = 'block';
+          bgPreviewActions.style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+
+        // Reset input
+        bgImageInput.value = '';
+      });
+
+      removeBgBtn.addEventListener('click', () => {
+        currentBgImageDataUrl = null;
+        bgPreviewContainer.style.display = 'none';
+        bgPreviewActions.style.display = 'none';
+        bgPreviewImg.src = '';
+      });
+
+      // Voice recording handlers
+      recordBtn.addEventListener('click', toggleRecording);
+
+      // Weather handlers
+      weatherSearchBtn.addEventListener('click', () => {
+        const city = weatherCityInput.value.trim();
+        if (!city) {
+          alert('请输入城市名称');
+          return;
+        }
+        fetchWeather(city);
+      });
+
+      weatherCityInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          const city = weatherCityInput.value.trim();
+          if (city) {
+            fetchWeather(city);
+          }
+        }
+      });
+
+      // Anniversary modal handlers
+      addAnniversaryBtn.addEventListener('click', openAnniversaryModal);
+      cancelAnniversaryBtn.addEventListener('click', closeAnniversaryModal);
+
+      anniversaryModal.addEventListener('click', (e) => {
+        if (e.target === anniversaryModal) closeAnniversaryModal();
+      });
+
+      saveAnniversaryBtn.addEventListener('click', () => {
+        const name = anniversaryNameInput.value.trim();
+        const date = anniversaryDateInput.value;
+        const type = anniversaryTypeSelect.value;
+        
+        if (!name) {
+          alert('请输入纪念日名称');
+          return;
+        }
+        if (!date) {
+          alert('请选择日期');
+          return;
+        }
+        
+        const newAnniversary = {
+          id: newId(),
+          name,
+          date,
+          type
+        };
+        
+        anniversaries.push(newAnniversary);
+        saveAnniversaries();
+        renderAnniversaries();
+        closeAnniversaryModal();
+      });
+
+      // Countdown modal handlers
+      if (addCountdownBtn) addCountdownBtn.addEventListener('click', openCountdownModal);
+      if (cancelCountdownBtn) cancelCountdownBtn.addEventListener('click', closeCountdownModal);
+
+      if (countdownModal) {
+        countdownModal.addEventListener('click', (e) => {
+          if (e.target === countdownModal) closeCountdownModal();
+        });
+      }
+
+      if (saveCountdownBtn) saveCountdownBtn.addEventListener('click', handleSaveCountdown);
+    }
+
+    // Ensure DOM is ready before rendering
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        initDOM();
+        load();
+        openIdb().catch(() => {});
+        
+        // Debug: Check if Lunar library is loaded
+        console.log('Lunar library loaded:', typeof Lunar !== 'undefined');
+        if (typeof Lunar !== 'undefined') {
+          console.log('Lunar version:', Lunar.version || 'unknown');
+          const today = new Date();
+          const testLunar = getLunarDate(today.getFullYear(), today.getMonth(), today.getDate());
+          console.log('Today lunar date test:', testLunar);
+        }
+        
+        renderMonth();
+        renderAnniversaries();
+        renderCountdowns();
+        renderWeatherCities();
+        renderWeatherCurrent();
+        initEventListeners();
+      });
+    } else {
+      initDOM();
+      load();
+      openIdb().catch(() => {});
+      
+      console.log('Lunar library loaded:', typeof Lunar !== 'undefined');
+      if (typeof Lunar !== 'undefined') {
+        console.log('Lunar version:', Lunar.version || 'unknown');
+        const today = new Date();
+        const testLunar = getLunarDate(today.getFullYear(), today.getMonth(), today.getDate());
+        console.log('Today lunar date test:', testLunar);
+      }
+      
+      renderMonth();
+      renderAnniversaries();
+      renderCountdowns();
+      renderWeatherCities();
+      renderWeatherCurrent();
+      initEventListeners();
+    }
+  </script>
+</body>
+</html>
