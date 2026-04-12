@@ -13,14 +13,20 @@
   <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Supabase 配置 - 请替换为你的项目配置
-    const SUPABASE_URL = 'https://vorwjvwwqdukkalxibiy.supabase.co'; // 例如: https://xxx.supabase.co
+    // Supabase 配置
+    const SUPABASE_URL = 'https://vorwjvwwqdukkalxibiy.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvcndqdnd3cWR1a2thbHhpYml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5Nzg5MTAsImV4cCI6MjA5MTU1NDkxMH0.YggaMVcOy_gqTyV9uxIHYRpDUWziQG_nttmf3QXcwyU';
     
-    // 初始化 Supabase
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    console.log('✅ Supabase 初始化成功');
+    // 初始化 Supabase 客户端 - 使用全局变量避免重复声明
+    if (typeof window.mySupabase === 'undefined') {
+      window.mySupabase = null;
+      if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
+        window.mySupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('✅ Supabase 初始化成功', window.mySupabase);
+      } else {
+        console.error('❌ Supabase SDK 未正确加载');
+      }
+    }
   </script>
 
   <style>
@@ -2076,12 +2082,12 @@
     
     // 同步日历数据到 Supabase
     async function syncCalendarToSupabase(dateKey, data) {
-      if (!SUPABASE_ENABLED || !supabase) return;
+      if (!SUPABASE_ENABLED || !window.mySupabase) return;
       try {
         if (data === null) {
-          await supabase.from('calendar').delete().eq('dateKey', dateKey);
+          await window.mySupabase.from('calendar').delete().eq('dateKey', dateKey);
         } else {
-          const { error } = await supabase
+          const { error } = await window.mySupabase
             .from('calendar')
             .upsert({ dateKey, data, updated_at: new Date().toISOString() });
           if (error) throw error;
@@ -2094,7 +2100,7 @@
     
     // 同步纪念日到 Supabase
     async function syncAnniversaryToSupabase(anniversary) {
-      if (!SUPABASE_ENABLED || !supabase) return;
+      if (!SUPABASE_ENABLED || !window.mySupabase) return;
       try {
         const { error } = await supabase
           .from('anniversaries')
@@ -2108,7 +2114,7 @@
     
     // 从 Supabase 删除纪念日
     async function removeAnniversaryFromSupabase(id) {
-      if (!SUPABASE_ENABLED || !supabase) return;
+      if (!SUPABASE_ENABLED || !window.mySupabase) return;
       try {
         const { error } = await supabase
           .from('anniversaries')
@@ -2123,7 +2129,7 @@
     
     // 同步倒计时到 Supabase
     async function syncCountdownToSupabase(countdown) {
-      if (!SUPABASE_ENABLED || !supabase) return;
+      if (!SUPABASE_ENABLED || !window.mySupabase) return;
       try {
         const { error } = await supabase
           .from('countdowns')
@@ -2137,7 +2143,7 @@
     
     // 从 Supabase 删除倒计时
     async function removeCountdownFromSupabase(id) {
-      if (!SUPABASE_ENABLED || !supabase) return;
+      if (!SUPABASE_ENABLED || !window.mySupabase) return;
       try {
         const { error } = await supabase
           .from('countdowns')
@@ -2152,7 +2158,7 @@
     
     // 监听 Supabase 实时变化
     function setupRealtimeListeners() {
-      if (!SUPABASE_ENABLED || !supabase) {
+      if (!SUPABASE_ENABLED || !window.mySupabase) {
         console.log('⚠️ Supabase 未启用，使用本地存储');
         return;
       }
@@ -2160,7 +2166,7 @@
       console.log('🔄 启动 Supabase 实时同步...');
       
       // 监听日历数据变化
-      supabase
+      window.mySupabase
         .channel('calendar_changes')
         .on(
           'postgres_changes',
@@ -2187,7 +2193,7 @@
         .subscribe();
       
       // 监听纪念日变化
-      supabase
+      window.mySupabase
         .channel('anniversary_changes')
         .on(
           'postgres_changes',
@@ -2199,7 +2205,7 @@
             isRemoteUpdate = true;
             
             // 重新获取所有纪念日
-            const { data } = await supabase
+            const { data } = await window.mySupabase
               .from('anniversaries')
               .select('data');
             
@@ -2214,7 +2220,7 @@
         .subscribe();
       
       // 监听倒计时变化
-      supabase
+      window.mySupabase
         .channel('countdown_changes')
         .on(
           'postgres_changes',
@@ -2226,7 +2232,7 @@
             isRemoteUpdate = true;
             
             // 重新获取所有倒计时
-            const { data } = await supabase
+            const { data } = await window.mySupabase
               .from('countdowns')
               .select('data');
             
