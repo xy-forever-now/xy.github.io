@@ -9,6 +9,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.min.js"></script>
+  
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Supabase 配置 - 请替换为你的项目配置
+    const SUPABASE_URL = 'https://vorwjvwwqdukkalxibiy.supabase.co'; // 例如: https://xxx.supabase.co
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvcndqdnd3cWR1a2thbHhpYml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5Nzg5MTAsImV4cCI6MjA5MTU1NDkxMH0.YggaMVcOy_gqTyV9uxIHYRpDUWziQG_nttmf3QXcwyU';
+    
+    // 初始化 Supabase
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    console.log('✅ Supabase 初始化成功');
+  </script>
 
   <style>
     :root {
@@ -2031,11 +2044,204 @@
 
   <script>
     const STORAGE_KEY = "dailyCheckinData_v1";
-    const IDB_NAME = "dailyCheckinFiles_v1";
-    const IDB_STORE = "files";
+    const IDB_NAME = "dailyCheckinDB_v2";
+    const IDB_STORE_FILES = "files";
+    const IDB_STORE_CALENDAR = "calendar";
+    const IDB_STORE_ANNIVERSARIES = "anniversaries";
+    const IDB_STORE_COUNTDOWNS = "countdowns";
+    const IDB_STORE_WEATHER = "weather";
     const MAX_FILE_SIZE = 15 * 1024 * 1024;
     const MAX_FILES_PER_DAY = 20;
     const ANNIVERSARY_KEY = "anniversaryData_v1";
+    
+    // Supabase 实时同步配置
+    const SUPABASE_ENABLED = true; // 设置为 true 启用实时同步
+    const SYNC_DEBOUNCE_TIME = 500; // 防抖时间(ms)
+    let syncTimeout = null;
+    let isRemoteUpdate = false; // 标记是否为远程更新
+    
+    /**
+     * Supabase 同步工具函数
+     */
+    
+    // 防抖同步到 Supabase
+    function debounceSyncToSupabase(syncFn) {
+      if (!SUPABASE_ENABLED || !window.supabase) return;
+      
+      if (syncTimeout) clearTimeout(syncTimeout);
+      syncTimeout = setTimeout(() => {
+        syncFn().catch(err => console.error('同步到 Supabase 失败:', err));
+      }, SYNC_DEBOUNCE_TIME);
+    }
+    
+    // 同步日历数据到 Supabase
+    async function syncCalendarToSupabase(dateKey, data) {
+      if (!SUPABASE_ENABLED || !supabase) return;
+      try {
+        if (data === null) {
+          await supabase.from('calendar').delete().eq('dateKey', dateKey);
+        } else {
+          const { error } = await supabase
+            .from('calendar')
+            .upsert({ dateKey, data, updated_at: new Date().toISOString() });
+          if (error) throw error;
+        }
+        console.log(`📤 已同步日历: ${dateKey}`);
+      } catch (e) {
+        console.error('同步日历失败:', e);
+      }
+    }
+    
+    // 同步纪念日到 Supabase
+    async function syncAnniversaryToSupabase(anniversary) {
+      if (!SUPABASE_ENABLED || !supabase) return;
+      try {
+        const { error } = await supabase
+          .from('anniversaries')
+          .upsert({ id: anniversary.id, data: anniversary, updated_at: new Date().toISOString() });
+        if (error) throw error;
+        console.log(`📤 已同步纪念日: ${anniversary.name}`);
+      } catch (e) {
+        console.error('同步纪念日失败:', e);
+      }
+    }
+    
+    // 从 Supabase 删除纪念日
+    async function removeAnniversaryFromSupabase(id) {
+      if (!SUPABASE_ENABLED || !supabase) return;
+      try {
+        const { error } = await supabase
+          .from('anniversaries')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+        console.log(`🗑️ 已删除纪念日: ${id}`);
+      } catch (e) {
+        console.error('删除纪念日失败:', e);
+      }
+    }
+    
+    // 同步倒计时到 Supabase
+    async function syncCountdownToSupabase(countdown) {
+      if (!SUPABASE_ENABLED || !supabase) return;
+      try {
+        const { error } = await supabase
+          .from('countdowns')
+          .upsert({ id: countdown.id, data: countdown, updated_at: new Date().toISOString() });
+        if (error) throw error;
+        console.log(`📤 已同步倒计时: ${countdown.name}`);
+      } catch (e) {
+        console.error('同步倒计时失败:', e);
+      }
+    }
+    
+    // 从 Supabase 删除倒计时
+    async function removeCountdownFromSupabase(id) {
+      if (!SUPABASE_ENABLED || !supabase) return;
+      try {
+        const { error } = await supabase
+          .from('countdowns')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+        console.log(`🗑️ 已删除倒计时: ${id}`);
+      } catch (e) {
+        console.error('删除倒计时失败:', e);
+      }
+    }
+    
+    // 监听 Supabase 实时变化
+    function setupRealtimeListeners() {
+      if (!SUPABASE_ENABLED || !supabase) {
+        console.log('⚠️ Supabase 未启用，使用本地存储');
+        return;
+      }
+      
+      console.log('🔄 启动 Supabase 实时同步...');
+      
+      // 监听日历数据变化
+      supabase
+        .channel('calendar_changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'calendar' },
+          (payload) => {
+            if (isRemoteUpdate) return;
+            
+            console.log('📥 接收到远程日历更新');
+            isRemoteUpdate = true;
+            
+            const { eventType, new: newData, old: oldData } = payload;
+            
+            if (eventType === 'DELETE' && oldData) {
+              delete store[oldData.dateKey];
+            } else if (newData) {
+              store[newData.dateKey] = newData.data;
+            }
+            
+            renderMonth();
+            
+            setTimeout(() => { isRemoteUpdate = false; }, 100);
+          }
+        )
+        .subscribe();
+      
+      // 监听纪念日变化
+      supabase
+        .channel('anniversary_changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'anniversaries' },
+          async (payload) => {
+            if (isRemoteUpdate) return;
+            
+            console.log('📥 接收到远程纪念日更新');
+            isRemoteUpdate = true;
+            
+            // 重新获取所有纪念日
+            const { data } = await supabase
+              .from('anniversaries')
+              .select('data');
+            
+            if (data) {
+              anniversaries = data.map(item => item.data);
+              renderAnniversaries();
+            }
+            
+            setTimeout(() => { isRemoteUpdate = false; }, 100);
+          }
+        )
+        .subscribe();
+      
+      // 监听倒计时变化
+      supabase
+        .channel('countdown_changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'countdowns' },
+          async (payload) => {
+            if (isRemoteUpdate) return;
+            
+            console.log('📥 接收到远程倒计时更新');
+            isRemoteUpdate = true;
+            
+            // 重新获取所有倒计时
+            const { data } = await supabase
+              .from('countdowns')
+              .select('data');
+            
+            if (data) {
+              countdowns = data.map(item => item.data);
+              renderCountdowns();
+            }
+            
+            setTimeout(() => { isRemoteUpdate = false; }, 100);
+          }
+        )
+        .subscribe();
+      
+      console.log('✅ Supabase 实时同步已启动 - 多人协作模式');
+    }
 
     /** @typedef {{ id: string, name: string, type: string, size: number }} FileMeta */
 
@@ -2312,13 +2518,36 @@ ${innerHtml}
     function openIdb() {
       if (idbPromise) return idbPromise;
       idbPromise = new Promise((resolve, reject) => {
-        const req = indexedDB.open(IDB_NAME, 1);
+        const req = indexedDB.open(IDB_NAME, 2);
         req.onerror = () => reject(req.error);
         req.onsuccess = () => resolve(req.result);
         req.onupgradeneeded = (e) => {
           const db = e.target.result;
-          if (!db.objectStoreNames.contains(IDB_STORE)) {
-            db.createObjectStore(IDB_STORE, { keyPath: "id" });
+          const oldVersion = e.oldVersion;
+          
+          // Create files store (v1)
+          if (!db.objectStoreNames.contains(IDB_STORE_FILES)) {
+            db.createObjectStore(IDB_STORE_FILES, { keyPath: "id" });
+          }
+          
+          // Create calendar store (v2)
+          if (!db.objectStoreNames.contains(IDB_STORE_CALENDAR)) {
+            db.createObjectStore(IDB_STORE_CALENDAR, { keyPath: "dateKey" });
+          }
+          
+          // Create anniversaries store (v2)
+          if (!db.objectStoreNames.contains(IDB_STORE_ANNIVERSARIES)) {
+            db.createObjectStore(IDB_STORE_ANNIVERSARIES, { keyPath: "id" });
+          }
+          
+          // Create countdowns store (v2)
+          if (!db.objectStoreNames.contains(IDB_STORE_COUNTDOWNS)) {
+            db.createObjectStore(IDB_STORE_COUNTDOWNS, { keyPath: "id" });
+          }
+          
+          // Create weather store (v2)
+          if (!db.objectStoreNames.contains(IDB_STORE_WEATHER)) {
+            db.createObjectStore(IDB_STORE_WEATHER, { keyPath: "city" });
           }
         };
       });
@@ -2330,10 +2559,10 @@ ${innerHtml}
       return openIdb().then(
         (db) =>
           new Promise((resolve, reject) => {
-            const tx = db.transaction(IDB_STORE, "readwrite");
+            const tx = db.transaction(IDB_STORE_FILES, "readwrite");
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
-            tx.objectStore(IDB_STORE).put(rec);
+            tx.objectStore(IDB_STORE_FILES).put(rec);
           })
       );
     }
@@ -2342,10 +2571,10 @@ ${innerHtml}
       return openIdb().then(
         (db) =>
           new Promise((resolve, reject) => {
-            const tx = db.transaction(IDB_STORE, "readwrite");
+            const tx = db.transaction(IDB_STORE_FILES, "readwrite");
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
-            tx.objectStore(IDB_STORE).delete(id);
+            tx.objectStore(IDB_STORE_FILES).delete(id);
           })
       );
     }
@@ -2354,10 +2583,182 @@ ${innerHtml}
       return openIdb().then(
         (db) =>
           new Promise((resolve, reject) => {
-            const tx = db.transaction(IDB_STORE, "readonly");
-            const r = tx.objectStore(IDB_STORE).get(id);
+            const tx = db.transaction(IDB_STORE_FILES, "readonly");
+            const r = tx.objectStore(IDB_STORE_FILES).get(id);
             r.onerror = () => reject(r.error);
             r.onsuccess = () => resolve(r.result);
+          })
+      );
+    }
+
+    // Calendar data operations
+    function idbCalendarPut(data) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_CALENDAR, "readwrite");
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+            tx.objectStore(IDB_STORE_CALENDAR).put(data);
+          })
+      );
+    }
+
+    function idbCalendarGet(dateKey) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_CALENDAR, "readonly");
+            const r = tx.objectStore(IDB_STORE_CALENDAR).get(dateKey);
+            r.onerror = () => reject(r.error);
+            r.onsuccess = () => resolve(r.result);
+          })
+      );
+    }
+
+    function idbCalendarGetAll() {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_CALENDAR, "readonly");
+            const r = tx.objectStore(IDB_STORE_CALENDAR).getAll();
+            r.onerror = () => reject(r.error);
+            r.onsuccess = () => resolve(r.result);
+          })
+      );
+    }
+
+    function idbCalendarDelete(dateKey) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_CALENDAR, "readwrite");
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+            tx.objectStore(IDB_STORE_CALENDAR).delete(dateKey);
+          })
+      );
+    }
+
+    // Anniversary operations
+    function idbAnniversaryPut(anniversary) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_ANNIVERSARIES, "readwrite");
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+            tx.objectStore(IDB_STORE_ANNIVERSARIES).put(anniversary);
+          })
+      );
+    }
+
+    function idbAnniversaryGetAll() {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_ANNIVERSARIES, "readonly");
+            const r = tx.objectStore(IDB_STORE_ANNIVERSARIES).getAll();
+            r.onerror = () => reject(r.error);
+            r.onsuccess = () => resolve(r.result);
+          })
+      );
+    }
+
+    function idbAnniversaryDelete(id) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_ANNIVERSARIES, "readwrite");
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+            tx.objectStore(IDB_STORE_ANNIVERSARIES).delete(id);
+          })
+      );
+    }
+
+    // Countdown operations
+    function idbCountdownPut(countdown) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_COUNTDOWNS, "readwrite");
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+            tx.objectStore(IDB_STORE_COUNTDOWNS).put(countdown);
+          })
+      );
+    }
+
+    function idbCountdownGetAll() {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_COUNTDOWNS, "readonly");
+            const r = tx.objectStore(IDB_STORE_COUNTDOWNS).getAll();
+            r.onerror = () => reject(r.error);
+            r.onsuccess = () => resolve(r.result);
+          })
+      );
+    }
+
+    function idbCountdownDelete(id) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_COUNTDOWNS, "readwrite");
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+            tx.objectStore(IDB_STORE_COUNTDOWNS).delete(id);
+          })
+      );
+    }
+
+    // Weather operations
+    function idbWeatherPut(weatherData) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_WEATHER, "readwrite");
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+            tx.objectStore(IDB_STORE_WEATHER).put(weatherData);
+          })
+      );
+    }
+
+    function idbWeatherGet(city) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_WEATHER, "readonly");
+            const r = tx.objectStore(IDB_STORE_WEATHER).get(city);
+            r.onerror = () => reject(r.error);
+            r.onsuccess = () => resolve(r.result);
+          })
+      );
+    }
+
+    function idbWeatherGetAll() {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_WEATHER, "readonly");
+            const r = tx.objectStore(IDB_STORE_WEATHER).getAll();
+            r.onerror = () => reject(r.error);
+            r.onsuccess = () => resolve(r.result);
+          })
+      );
+    }
+
+    function idbWeatherDelete(city) {
+      return openIdb().then(
+        (db) =>
+          new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE_WEATHER, "readwrite");
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+            tx.objectStore(IDB_STORE_WEATHER).delete(city);
           })
       );
     }
@@ -2507,31 +2908,82 @@ ${innerHtml}
 
     const WEATHER_KEY = "weatherData_v1";
 
-    function load() {
+    async function load() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        store = raw ? JSON.parse(raw) : {};
-        if (typeof store !== "object" || store === null) store = {};
-      } catch {
+        // Load calendar data from IndexedDB
+        const calendarRecords = await idbCalendarGetAll();
+        store = {};
+        calendarRecords.forEach(rec => {
+          store[rec.dateKey] = rec.data;
+        });
+        
+        // Migrate from localStorage if IndexedDB is empty
+        if (calendarRecords.length === 0) {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+              const oldStore = JSON.parse(raw);
+              if (typeof oldStore === 'object' && oldStore !== null) {
+                store = oldStore;
+                // Migrate to IndexedDB
+                for (const [dateKey, data] of Object.entries(store)) {
+                  await idbCalendarPut({ dateKey, data });
+                }
+                console.log('已迁移日历数据到数据库');
+              }
+            }
+          } catch (e) {
+            console.error('localStorage 迁移失败:', e);
+          }
+        }
+      } catch (e) {
+        console.error('加载日历数据失败:', e);
         store = {};
       }
-      loadAnniversaries();
-      loadCountdowns();
-      loadWeatherData();
+      
+      await loadAnniversaries();
+      await loadCountdowns();
+      await loadWeatherData();
     }
 
-    function loadAnniversaries() {
+    async function loadAnniversaries() {
       try {
-        const raw = localStorage.getItem(ANNIVERSARY_KEY);
-        anniversaries = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(anniversaries)) anniversaries = [];
-      } catch {
+        anniversaries = await idbAnniversaryGetAll();
+        
+        // Migrate from localStorage if IndexedDB is empty
+        if (anniversaries.length === 0) {
+          try {
+            const raw = localStorage.getItem(ANNIVERSARY_KEY);
+            if (raw) {
+              const oldData = JSON.parse(raw);
+              if (Array.isArray(oldData)) {
+                anniversaries = oldData;
+                // Migrate to IndexedDB
+                for (const ann of anniversaries) {
+                  await idbAnniversaryPut(ann);
+                }
+                console.log('已迁移纪念日数据到数据库');
+              }
+            }
+          } catch (e) {
+            console.error('localStorage 迁移失败:', e);
+          }
+        }
+      } catch (e) {
+        console.error('加载纪念日数据失败:', e);
         anniversaries = [];
       }
     }
 
-    function saveAnniversaries() {
-      localStorage.setItem(ANNIVERSARY_KEY, JSON.stringify(anniversaries));
+    async function saveAnniversaries() {
+      try {
+        // Clear existing records and save all
+        const existing = await idbAnniversaryGetAll();
+        await Promise.all(existing.map(a => idbAnniversaryDelete(a.id)));
+        await Promise.all(anniversaries.map(a => idbAnniversaryPut(a)));
+      } catch (e) {
+        console.error('保存纪念日数据失败:', e);
+      }
     }
 
     // Placeholder - actual implementation is below
@@ -2623,7 +3075,7 @@ ${innerHtml}
         // Switch to the new city
         switchToCity(name);
 
-        saveWeatherData();
+        await saveWeatherData();
         renderWeatherCities();
         renderMonth();
 
@@ -2637,7 +3089,7 @@ ${innerHtml}
       }
     }
 
-    function switchToCity(cityName) {
+    async function switchToCity(cityName) {
       const cityData = weatherCities.find(c => c.city === cityName);
       if (cityData) {
         weatherData = cityData;
@@ -2645,20 +3097,23 @@ ${innerHtml}
         selectedWeatherDate = null; // Reset selected date when switching city
         renderWeatherCurrent();
         renderMonth();
-        saveWeatherData();
+        await saveWeatherData();
       }
     }
 
-    function removeCity(cityName) {
+    async function removeCity(cityName) {
       if (!confirm(`确定删除城市「${cityName}」吗？`)) {
         return;
       }
 
       weatherCities = weatherCities.filter(c => c.city !== cityName);
+      
+      // Delete from IndexedDB
+      await idbWeatherDelete(cityName);
 
       if (activeWeatherCity === cityName) {
         if (weatherCities.length > 0) {
-          switchToCity(weatherCities[0].city);
+          await switchToCity(weatherCities[0].city);
         } else {
           weatherData = null;
           activeWeatherCity = null;
@@ -2669,7 +3124,7 @@ ${innerHtml}
 
       renderWeatherCities();
       renderMonth();
-      saveWeatherData();
+      await saveWeatherData();
     }
 
     function renderWeatherCities() {
@@ -2823,15 +3278,21 @@ ${innerHtml}
       return getWeatherForDate(dateKey) !== null;
     }
 
-    function loadWeatherData() {
+    async function loadWeatherData() {
       try {
-        const raw = localStorage.getItem(WEATHER_KEY);
-        const data = raw ? JSON.parse(raw) : null;
-        if (data) {
-          weatherCities = data.cities || [];
-          activeWeatherCity = data.activeCity || null;
-          selectedWeatherDate = data.selectedDate || null;
-
+        // Load from IndexedDB
+        const allWeather = await idbWeatherGetAll();
+        
+        if (allWeather.length > 0) {
+          weatherCities = allWeather.map(w => w.data);
+          
+          // Find active city metadata
+          const metaRecord = await idbWeatherGet('__meta__');
+          if (metaRecord) {
+            activeWeatherCity = metaRecord.data.activeCity || null;
+            selectedWeatherDate = metaRecord.data.selectedDate || null;
+          }
+          
           if (weatherCities.length > 0) {
             // Load active city data
             const activeCity = weatherCities.find(c => c.city === activeWeatherCity);
@@ -2842,21 +3303,63 @@ ${innerHtml}
               activeWeatherCity = weatherCities[0].city;
             }
           }
+        } else {
+          // Migrate from localStorage if IndexedDB is empty
+          try {
+            const raw = localStorage.getItem(WEATHER_KEY);
+            const data = raw ? JSON.parse(raw) : null;
+            if (data) {
+              weatherCities = data.cities || [];
+              activeWeatherCity = data.activeCity || null;
+              selectedWeatherDate = data.selectedDate || null;
+              
+              // Save to IndexedDB
+              for (const city of weatherCities) {
+                await idbWeatherPut({ city: city.city, data: city });
+              }
+              await idbWeatherPut({ 
+                city: '__meta__', 
+                data: { activeCity: activeWeatherCity, selectedDate: selectedWeatherDate } 
+              });
+              console.log('已迁移天气数据到数据库');
+              
+              if (weatherCities.length > 0) {
+                const activeCity = weatherCities.find(c => c.city === activeWeatherCity);
+                if (activeCity) {
+                  weatherData = activeCity;
+                } else {
+                  weatherData = weatherCities[0];
+                  activeWeatherCity = weatherCities[0].city;
+                }
+              }
+            }
+          } catch (e) {
+            console.error('localStorage 迁移失败:', e);
+          }
         }
-      } catch {
+      } catch (e) {
+        console.error('加载天气数据失败:', e);
         weatherCities = [];
         weatherData = null;
         activeWeatherCity = null;
       }
     }
 
-    function saveWeatherData() {
-      const data = {
-        cities: weatherCities,
-        activeCity: activeWeatherCity,
-        selectedDate: selectedWeatherDate
-      };
-      localStorage.setItem(WEATHER_KEY, JSON.stringify(data));
+    async function saveWeatherData() {
+      try {
+        // Save all cities
+        for (const city of weatherCities) {
+          await idbWeatherPut({ city: city.city, data: city });
+        }
+        
+        // Save metadata
+        await idbWeatherPut({ 
+          city: '__meta__', 
+          data: { activeCity: activeWeatherCity, selectedDate: selectedWeatherDate } 
+        });
+      } catch (e) {
+        console.error('保存天气数据失败:', e);
+      }
     }
 
     function getWeatherIcon(weather) {
@@ -3115,11 +3618,13 @@ ${innerHtml}
         deleteBtn.className = 'btn-delete-anniversary';
         deleteBtn.innerHTML = '×';
         deleteBtn.title = '删除';
-        deleteBtn.addEventListener('click', (e) => {
+        deleteBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
           if (confirm(`确定删除「${ann.name}」吗？`)) {
             anniversaries = anniversaries.filter(a => a.id !== ann.id);
-            saveAnniversaries();
+            await idbAnniversaryDelete(ann.id);
+            // 从 Supabase 删除
+            await removeAnniversaryFromSupabase(ann.id);
             renderAnniversaries();
           }
         });
@@ -3166,17 +3671,44 @@ ${innerHtml}
     let saveCountdownBtn, cancelCountdownBtn, addCountdownBtn, countdownListEl;
     let countdownTimerInterval = null;
 
-    function loadCountdowns() {
+    async function loadCountdowns() {
       try {
-        const raw = localStorage.getItem(COUNTDOWN_KEY);
-        countdowns = raw ? JSON.parse(raw) : [];
-      } catch {
+        countdowns = await idbCountdownGetAll();
+        
+        // Migrate from localStorage if IndexedDB is empty
+        if (countdowns.length === 0) {
+          try {
+            const raw = localStorage.getItem(COUNTDOWN_KEY);
+            if (raw) {
+              const oldData = JSON.parse(raw);
+              if (Array.isArray(oldData)) {
+                countdowns = oldData;
+                // Migrate to IndexedDB
+                for (const cd of countdowns) {
+                  await idbCountdownPut(cd);
+                }
+                console.log('已迁移倒计时数据到数据库');
+              }
+            }
+          } catch (e) {
+            console.error('localStorage 迁移失败:', e);
+          }
+        }
+      } catch (e) {
+        console.error('加载倒计时数据失败:', e);
         countdowns = [];
       }
     }
 
-    function saveCountdowns() {
-      localStorage.setItem(COUNTDOWN_KEY, JSON.stringify(countdowns));
+    async function saveCountdowns() {
+      try {
+        // Clear existing records and save all
+        const existing = await idbCountdownGetAll();
+        await Promise.all(existing.map(c => idbCountdownDelete(c.id)));
+        await Promise.all(countdowns.map(c => idbCountdownPut(c)));
+      } catch (e) {
+        console.error('保存倒计时数据失败:', e);
+      }
     }
 
     function calculateCountdownDetail(targetDate) {
@@ -3272,11 +3804,13 @@ ${innerHtml}
         deleteBtn.className = 'btn-delete-countdown';
         deleteBtn.innerHTML = '×';
         deleteBtn.title = '删除';
-        deleteBtn.addEventListener('click', (e) => {
+        deleteBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
           if (confirm(`确定删除「${cd.name}」吗？`)) {
             countdowns = countdowns.filter(c => c.id !== cd.id);
-            saveCountdowns();
+            await idbCountdownDelete(cd.id);
+            // 从 Supabase 删除
+            await removeCountdownFromSupabase(cd.id);
             renderCountdowns();
             startCountdownTimer(); // Restart timer after deletion
           }
@@ -3343,7 +3877,7 @@ ${innerHtml}
       countdownModal.setAttribute('aria-hidden', 'true');
     }
 
-    function handleSaveCountdown() {
+    async function handleSaveCountdown() {
       if (!countdownNameInput || !countdownDateInput) return;
       const name = countdownNameInput.value.trim();
       const targetDate = countdownDateInput.value;
@@ -3364,13 +3898,22 @@ ${innerHtml}
       };
 
       countdowns.push(newCountdown);
-      saveCountdowns();
+      await idbCountdownPut(newCountdown);
+      // 同步到 Supabase
+      await syncCountdownToSupabase(newCountdown);
       renderCountdowns();
       closeCountdownModal();
     }
 
-    function saveStore() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    async function saveStore() {
+      try {
+        // Save all calendar data to IndexedDB
+        for (const [dateKey, data] of Object.entries(store)) {
+          await idbCalendarPut({ dateKey, data });
+        }
+      } catch (e) {
+        console.error('保存日历数据失败:', e);
+      }
     }
 
     function pad(n) {
@@ -3966,6 +4509,9 @@ ${innerHtml}
 
         if (!checked && !noteText && finalFiles.length === 0 && !currentBgImageDataUrl) {
           delete store[selectedKey];
+          await idbCalendarDelete(selectedKey);
+          // 同步删除到 Supabase
+          await syncCalendarToSupabase(selectedKey, null);
         } else {
           /** @type {{ checked: boolean, note?: string, files?: FileMeta[], bgImage?: string }} */
           const next = { checked };
@@ -3973,9 +4519,11 @@ ${innerHtml}
           if (finalFiles.length) next.files = finalFiles;
           if (currentBgImageDataUrl) next.bgImage = currentBgImageDataUrl;
           store[selectedKey] = next;
+          await idbCalendarPut({ dateKey: selectedKey, data: next });
+          // 同步到 Supabase
+          await syncCalendarToSupabase(selectedKey, next);
         }
 
-        saveStore();
         revokeDialogPreviews();
         dialogPendingFiles = [];
         renderMonth();
@@ -4155,20 +4703,20 @@ ${innerHtml}
       recordBtn.addEventListener('click', toggleRecording);
 
       // Weather handlers
-      weatherSearchBtn.addEventListener('click', () => {
+      weatherSearchBtn.addEventListener('click', async () => {
         const city = weatherCityInput.value.trim();
         if (!city) {
           alert('请输入城市名称');
           return;
         }
-        fetchWeather(city);
+        await fetchWeather(city);
       });
 
-      weatherCityInput.addEventListener('keypress', (e) => {
+      weatherCityInput.addEventListener('keypress', async (e) => {
         if (e.key === 'Enter') {
           const city = weatherCityInput.value.trim();
           if (city) {
-            fetchWeather(city);
+            await fetchWeather(city);
           }
         }
       });
@@ -4181,7 +4729,7 @@ ${innerHtml}
         if (e.target === anniversaryModal) closeAnniversaryModal();
       });
 
-      saveAnniversaryBtn.addEventListener('click', () => {
+      saveAnniversaryBtn.addEventListener('click', async () => {
         const name = anniversaryNameInput.value.trim();
         const date = anniversaryDateInput.value;
         const type = anniversaryTypeSelect.value;
@@ -4203,7 +4751,9 @@ ${innerHtml}
         };
         
         anniversaries.push(newAnniversary);
-        saveAnniversaries();
+        await idbAnniversaryPut(newAnniversary);
+        // 同步到 Supabase
+        await syncAnniversaryToSupabase(newAnniversary);
         renderAnniversaries();
         closeAnniversaryModal();
       });
@@ -4228,6 +4778,9 @@ ${innerHtml}
         load();
         openIdb().catch(() => {});
         
+        // 启动 Firebase 实时同步
+        setupRealtimeListeners();
+        
         // Debug: Check if Lunar library is loaded
         console.log('Lunar library loaded:', typeof Lunar !== 'undefined');
         if (typeof Lunar !== 'undefined') {
@@ -4248,6 +4801,9 @@ ${innerHtml}
       initDOM();
       load();
       openIdb().catch(() => {});
+      
+      // 启动 Firebase 实时同步
+      setupRealtimeListeners();
       
       console.log('Lunar library loaded:', typeof Lunar !== 'undefined');
       if (typeof Lunar !== 'undefined') {
