@@ -2083,6 +2083,14 @@
     // 同步日历数据到 Supabase
     async function syncCalendarToSupabase(dateKey, data) {
       if (!SUPABASE_ENABLED || !window.mySupabase) return;
+
+      // 防止循环同步：如果是远程更新触发的，跳过同步
+      if (isRemoteUpdate) {
+        console.log('⏭️ 跳过日历同步（远程更新）');
+        return;
+      }
+
+      isRemoteUpdate = true;
       try {
         if (data === null) {
           await window.mySupabase.from('calendar').delete().eq('dateKey', dateKey);
@@ -2095,28 +2103,48 @@
         console.log(`📤 已同步日历: ${dateKey}`);
       } catch (e) {
         console.error('同步日历失败:', e);
+      } finally {
+        setTimeout(() => { isRemoteUpdate = false; }, 100);
       }
     }
     
     // 同步纪念日到 Supabase
     async function syncAnniversaryToSupabase(anniversary) {
       if (!SUPABASE_ENABLED || !window.mySupabase) return;
+
+      // 防止循环同步：如果是远程更新触发的，跳过同步
+      if (isRemoteUpdate) {
+        console.log('⏭️ 跳过纪念日同步（远程更新）');
+        return;
+      }
+
+      isRemoteUpdate = true;
       try {
-        const { error } = await supabase
+        const { error } = await window.mySupabase
           .from('anniversaries')
           .upsert({ id: anniversary.id, data: anniversary, updated_at: new Date().toISOString() });
         if (error) throw error;
         console.log(`📤 已同步纪念日: ${anniversary.name}`);
       } catch (e) {
         console.error('同步纪念日失败:', e);
+      } finally {
+        setTimeout(() => { isRemoteUpdate = false; }, 100);
       }
     }
     
     // 从 Supabase 删除纪念日
     async function removeAnniversaryFromSupabase(id) {
       if (!SUPABASE_ENABLED || !window.mySupabase) return;
+
+      // 防止循环同步：如果是远程更新触发的，跳过同步
+      if (isRemoteUpdate) {
+        console.log('⏭️ 跳过纪念日删除（远程更新）');
+        return;
+      }
+
+      isRemoteUpdate = true;
       try {
-        const { error } = await supabase
+        const { error } = await window.mySupabase
           .from('anniversaries')
           .delete()
           .eq('id', id);
@@ -2124,28 +2152,48 @@
         console.log(`🗑️ 已删除纪念日: ${id}`);
       } catch (e) {
         console.error('删除纪念日失败:', e);
+      } finally {
+        setTimeout(() => { isRemoteUpdate = false; }, 100);
       }
     }
     
     // 同步倒计时到 Supabase
     async function syncCountdownToSupabase(countdown) {
       if (!SUPABASE_ENABLED || !window.mySupabase) return;
+
+      // 防止循环同步：如果是远程更新触发的，跳过同步
+      if (isRemoteUpdate) {
+        console.log('⏭️ 跳过倒计时同步（远程更新）');
+        return;
+      }
+
+      isRemoteUpdate = true;
       try {
-        const { error } = await supabase
+        const { error } = await window.mySupabase
           .from('countdowns')
           .upsert({ id: countdown.id, data: countdown, updated_at: new Date().toISOString() });
         if (error) throw error;
         console.log(`📤 已同步倒计时: ${countdown.name}`);
       } catch (e) {
         console.error('同步倒计时失败:', e);
+      } finally {
+        setTimeout(() => { isRemoteUpdate = false; }, 100);
       }
     }
     
     // 从 Supabase 删除倒计时
     async function removeCountdownFromSupabase(id) {
       if (!SUPABASE_ENABLED || !window.mySupabase) return;
+
+      // 防止循环同步：如果是远程更新触发的，跳过同步
+      if (isRemoteUpdate) {
+        console.log('⏭️ 跳过倒计时删除（远程更新）');
+        return;
+      }
+
+      isRemoteUpdate = true;
       try {
-        const { error } = await supabase
+        const { error } = await window.mySupabase
           .from('countdowns')
           .delete()
           .eq('id', id);
@@ -2153,6 +2201,8 @@
         console.log(`🗑️ 已删除倒计时: ${id}`);
       } catch (e) {
         console.error('删除倒计时失败:', e);
+      } finally {
+        setTimeout(() => { isRemoteUpdate = false; }, 100);
       }
     }
     
@@ -2914,6 +2964,67 @@ ${innerHtml}
 
     const WEATHER_KEY = "weatherData_v1";
 
+    // 从 Supabase 云端拉取数据
+    async function loadFromSupabase() {
+      if (!SUPABASE_ENABLED || !window.mySupabase) {
+        console.log('⚠️ Supabase 未启用，跳过云端数据拉取');
+        return;
+      }
+
+      try {
+        console.log('🔄 开始从 Supabase 拉取数据...');
+
+        // 拉取日历数据
+        const { data: calendarData, error: calendarError } = await window.mySupabase
+          .from('calendar')
+          .select('dateKey, data');
+
+        if (calendarError) {
+          console.error('拉取日历数据失败:', calendarError);
+        } else if (calendarData && calendarData.length > 0) {
+          for (const { dateKey, data } of calendarData) {
+            store[dateKey] = data;
+            await idbCalendarPut({ dateKey, data });
+          }
+          console.log(`✅ 已从云端恢复 ${calendarData.length} 条日历记录`);
+        }
+
+        // 拉取纪念日
+        const { data: anniversaryData, error: anniversaryError } = await window.mySupabase
+          .from('anniversaries')
+          .select('data');
+
+        if (anniversaryError) {
+          console.error('拉取纪念日数据失败:', anniversaryError);
+        } else if (anniversaryData && anniversaryData.length > 0) {
+          anniversaries = anniversaryData.map(item => item.data);
+          for (const ann of anniversaries) {
+            await idbAnniversaryPut(ann);
+          }
+          console.log(`✅ 已从云端恢复 ${anniversaries.length} 个纪念日`);
+        }
+
+        // 拉取倒计时
+        const { data: countdownData, error: countdownError } = await window.mySupabase
+          .from('countdowns')
+          .select('data');
+
+        if (countdownError) {
+          console.error('拉取倒计时数据失败:', countdownError);
+        } else if (countdownData && countdownData.length > 0) {
+          countdowns = countdownData.map(item => item.data);
+          for (const cd of countdowns) {
+            await idbCountdownPut(cd);
+          }
+          console.log(`✅ 已从云端恢复 ${countdowns.length} 个倒计时`);
+        }
+
+        console.log('🎉 Supabase 云端数据拉取完成');
+      } catch (e) {
+        console.error('从云端拉取数据失败:', e);
+      }
+    }
+
     async function load() {
       try {
         // Load calendar data from IndexedDB
@@ -2922,8 +3033,19 @@ ${innerHtml}
         calendarRecords.forEach(rec => {
           store[rec.dateKey] = rec.data;
         });
-        
-        // Migrate from localStorage if IndexedDB is empty
+
+        // If IndexedDB is empty, try loading from Supabase first
+        if (calendarRecords.length === 0 && SUPABASE_ENABLED) {
+          await loadFromSupabase();
+
+          // Reload from IndexedDB after Supabase sync
+          const syncedRecords = await idbCalendarGetAll();
+          syncedRecords.forEach(rec => {
+            store[rec.dateKey] = rec.data;
+          });
+        }
+
+        // Migrate from localStorage if still empty
         if (calendarRecords.length === 0) {
           try {
             const raw = localStorage.getItem(STORAGE_KEY);
@@ -2987,6 +3109,14 @@ ${innerHtml}
         const existing = await idbAnniversaryGetAll();
         await Promise.all(existing.map(a => idbAnniversaryDelete(a.id)));
         await Promise.all(anniversaries.map(a => idbAnniversaryPut(a)));
+
+        // 同步到 Supabase
+        if (SUPABASE_ENABLED && window.mySupabase) {
+          for (const ann of anniversaries) {
+            await syncAnniversaryToSupabase(ann);
+          }
+          console.log(`📤 已批量同步 ${anniversaries.length} 个纪念日`);
+        }
       } catch (e) {
         console.error('保存纪念日数据失败:', e);
       }
@@ -3712,6 +3842,14 @@ ${innerHtml}
         const existing = await idbCountdownGetAll();
         await Promise.all(existing.map(c => idbCountdownDelete(c.id)));
         await Promise.all(countdowns.map(c => idbCountdownPut(c)));
+
+        // 同步到 Supabase
+        if (SUPABASE_ENABLED && window.mySupabase) {
+          for (const cd of countdowns) {
+            await syncCountdownToSupabase(cd);
+          }
+          console.log(`📤 已批量同步 ${countdowns.length} 个倒计时`);
+        }
       } catch (e) {
         console.error('保存倒计时数据失败:', e);
       }
