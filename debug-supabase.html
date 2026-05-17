@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase 实时同步诊断工具</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    h1 {
+      color: #2d3748;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 28px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    button:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .section {
+      background: #f7fafc;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .section h3 {
+      margin-top: 0;
+      color: #2d3748;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+    }
+
+    .status {
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+
+    .success {
+      background: #c6f6d5;
+      color: #22543d;
+      border: 1px solid #48bb78;
+    }
+
+    .error {
+      background: #fed7d7;
+      color: #742a2a;
+      border: 1px solid #f56565;
+    }
+
+    .warning {
+      background: #feebc8;
+      color: #7c2d12;
+      border: 1px solid #ed8936;
+    }
+
+    .info {
+      background: #bee3f8;
+      color: #2a4365;
+      border: 1px solid #4299e1;
+    }
+
+    .log {
+      background: #1a202c;
+      color: #e2e8f0;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+
+    .data-table th, .data-table td {
+      border: 1px solid #e2e8f0;
+      padding: 10px;
+      text-align: left;
+    }
+
+    .data-table th {
+      background: #edf2f7;
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Supabase 实时同步诊断工具</h1>
+
+    <div class="section">
+      <h3>🚀 快速测试</h3>
+      <div class="button-group">
+        <button id="btn-run-diagnostic">🔍 运行完整诊断</button>
+        <button id="btn-test-realtime">⚡ 测试实时同步</button>
+        <button id="btn-check-cloud">☁️ 检查云端数据</button>
+        <button id="btn-clear-logs">🗑️ 清空日志</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>📊 诊断状态</h3>
+      <div id="diagnostic-status">
+        <div class="status info">点击"运行完整诊断"开始检查</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>☁️ 云端数据</h3>
+      <div id="cloud-data">
+        <div class="status info">等待检查...</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>📋 实时日志</h3>
+      <div id="log-output" class="log">等待测试...</div>
+    </div>
+  </div>
+
+  <!-- 先加载 Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- 然后加载我们的脚本 -->
+  <script>
+    (function() {
+      'use strict';
+
+      // 配置
+      const SUPABASE_URL = 'https://vorwjvwwqdukkalxibiy.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvcndqdnd3cWR1a2thbHhpYml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5Nzg5MTAsImV4cCI6MjA5MTU1NDkxMH0.YggaMVcOy_gqTyV9uxIHYRpDUWziQG_nttmf3QXcwyU';
+
+      // 状态变量
+      let supabaseClient = null;
+      let realtimeChannel = null;
+      let testStartTime = null;
+
+      // 日志函数
+      function log(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const prefix = {
+          'success': '✅',
+          'error': '❌',
+          'warning': '⚠️',
+          'info': 'ℹ️'
+        }[type] || 'ℹ️';
+
+        const logDiv = document.getElementById('log-output');
+        const messageStr = `[${timestamp}] ${prefix} ${message}`;
+        logDiv.innerHTML += messageStr + '\n';
+        logDiv.scrollTop = logDiv.scrollHeight;
+        console.log(messageStr);
+      }
+
+      function clearLogs() {
+        document.getElementById('log-output').innerHTML = '日志已清空\n';
+      }
+
+      function updateStatus(message, type = 'info') {
+        const statusDiv = document.getElementById('diagnostic-status');
+        const html = `<div class="status ${type}">${message}</div>`;
+        statusDiv.innerHTML = html;
+      }
+
+      // 检查 Supabase 连接
+      async function checkSupabaseConnection() {
+        try {
+          if (!supabaseClient) {
+            throw new Error('Supabase 客户端未初始化');
+          }
+
+          log('✓ Supabase 客户端已初始化', 'success');
+
+          // 测试连接
+          const { data, error } = await supabaseClient.from('calendar').select('count').limit(1);
+
+          if (error) {
+            throw new Error(`连接失败: ${error.message}`);
+          }
+
+          log('✓ Supabase 连接正常', 'success');
+          updateStatus('✅ Supabase 连接正常', 'success');
+
+        } catch (error) {
+          log(`✗ Supabase 连接失败: ${error.message}`, 'error');
+          updateStatus(`❌ Supabase 连接失败: ${error.message}`, 'error');
+          throw error;
+        }
+      }
+
+      // 检查表结构
+      async function checkTableStructure() {
+        const tables = ['calendar', 'anniversaries', 'countdowns'];
+
+        for (const tableName of tables) {
+          try {
+            const { data, error } = await supabaseClient.from(tableName).select('*').limit(1);
+
+            if (error) {
+              log(`✗ 表 '${tableName}' 访问失败: ${error.message}`, 'error');
+
+              if (error.message.includes('does not exist')) {
+                log(`  💡 提示: 表 '${tableName}' 不存在，需要在 Supabase 创建`, 'warning');
+              } else if (error.message.includes('permission')) {
+                log(`  💡 提示: 表 '${tableName}' 权限不足，检查 RLS 策略`, 'warning');
+              }
+            } else {
+              log(`✓ 表 '${tableName}' 结构正常`, 'success');
+            }
+          } catch (error) {
+            log(`✗ 表 '${tableName}' 检查失败: ${error.message}`, 'error');
+          }
+        }
+      }
+
+      // 检查云端数据
+      async function checkCloudData() {
+        log('开始检查云端数据...', 'info');
+        const results = {};
+
+        try {
+          // 检查日历数据
+          const { data: calendarData, error: calendarError } = await supabaseClient
+            .from('calendar')
+            .select('dateKey, data');
+
+          if (calendarError) {
+            log(`✗ 日历数据查询失败: ${calendarError.message}`, 'error');
+            results.calendar = '查询失败';
+          } else {
+            log(`✓ 日历数据: ${calendarData.length} 条记录`, 'success');
+            results.calendar = `${calendarData.length} 条记录`;
+          }
+        } catch (error) {
+          log(`✗ 日历数据检查失败: ${error.message}`, 'error');
+          results.calendar = '检查失败';
+        }
+
+        try {
+          // 检查纪念日数据
+          const { data: anniversaryData, error: anniversaryError } = await supabaseClient
+            .from('anniversaries')
+            .select('data');
+
+          if (anniversaryError) {
+            log(`✗ 纪念日数据查询失败: ${anniversaryError.message}`, 'error');
+            results.anniversaries = '查询失败';
+          } else {
+            log(`✓ 纪念日数据: ${anniversaryData.length} 条记录`, 'success');
+            results.anniversaries = `${anniversaryData.length} 条记录`;
+          }
+        } catch (error) {
+          log(`✗ 纪念日数据检查失败: ${error.message}`, 'error');
+          results.anniversaries = '检查失败';
+        }
+
+        try {
+          // 检查倒计时数据
+          const { data: countdownData, error: countdownError } = await supabaseClient
+            .from('countdowns')
+            .select('data');
+
+          if (countdownError) {
+            log(`✗ 倒计时数据查询失败: ${countdownError.message}`, 'error');
+            results.countdowns = '查询失败';
+          } else {
+            log(`✓ 倒计时数据: ${countdownData.length} 条记录`, 'success');
+            results.countdowns = `${countdownData.length} 条记录`;
+          }
+        } catch (error) {
+          log(`✗ 倒计时数据检查失败: ${error.message}`, 'error');
+          results.countdowns = '检查失败';
+        }
+
+        // 更新云端数据显示
+        const cloudDataDiv = document.getElementById('cloud-data');
+        let html = '<table class="data-table"><tr><th>数据类型</th><th>云端记录数</th><th>状态</th></tr>';
+
+        Object.entries(results).forEach(([type, count]) => {
+          const status = count.includes('失败') ? 'error' : 'success';
+          const statusText = count.includes('失败') ? '❌ 失败' : '✅ 正常';
+          html += `<tr>
+            <td>${type}</td>
+            <td>${count}</td>
+            <td class="${status}">${statusText}</td>
+          </tr>`;
+        });
+
+        html += '</table>';
+        cloudDataDiv.innerHTML = html;
+
+        return results;
+      }
+
+      // 测试实时同步
+      async function testRealtimeSync() {
+        log('设置实时监听器...', 'info');
+
+        try {
+          // 清除之前的监听器
+          if (realtimeChannel) {
+            await supabaseClient.removeChannel(realtimeChannel);
+          }
+
+          let receivedUpdate = false;
+
+          // 创建实时监听器
+          realtimeChannel = supabaseClient
+            .channel('test_realtime_sync')
+            .on(
+              'postgres_changes',
+              {
+                event: '*',
+                schema: 'public',
+                table: 'calendar'
+              },
+              (payload) => {
+                log(`🎉 收到实时更新!`, 'success');
+                log(`   事件类型: ${payload.eventType}`, 'info');
+                log(`   数据: ${JSON.stringify(payload.new)}`, 'info');
+                receivedUpdate = true;
+              }
+            )
+            .subscribe((status) => {
+              if (status === 'SUBSCRIBED') {
+                log('✓ 实时监听器已订阅', 'success');
+                updateStatus('✅ 实时监听器已启动', 'success');
+              } else if (status === 'CLOSED') {
+                log('✗ 实时监听器已关闭', 'error');
+              } else if (status === 'CHANNEL_ERROR') {
+                log('✗ 实时监听器错误', 'error');
+                updateStatus('❌ 实时监听器启动失败', 'error');
+              } else {
+                log(`实时状态: ${status}`, 'info');
+              }
+            });
+
+          // 等待几秒检查订阅状态
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          if (receivedUpdate) {
+            log('✓ 实时同步功能正常', 'success');
+          } else {
+            log('⚠ 未收到实时更新（这是正常的，因为还没有新数据）', 'warning');
+            log('  💡 提示: 在另一个浏览器中添加数据，看是否收到更新', 'info');
+          }
+
+        } catch (error) {
+          log(`✗ 实时同步测试失败: ${error.message}`, 'error');
+          updateStatus('❌ 实时同步功能异常', 'error');
+        }
+      }
+
+      // 生成诊断报告
+      function generateDiagnosticReport() {
+        log('\n=== 诊断报告 ===', 'info');
+
+        const checks = [
+          {
+            name: 'Supabase 连接',
+            status: supabaseClient !== null,
+            critical: true
+          },
+          {
+            name: '实时监听器',
+            status: realtimeChannel !== null,
+            critical: true
+          }
+        ];
+
+        let allPassed = true;
+        checks.forEach(check => {
+          const status = check.status ? '✅ 通过' : '❌ 失败';
+          const critical = check.critical ? ' [关键]' : '';
+          log(`${status} ${check.name}${critical}`, check.status ? 'success' : 'error');
+          if (!check.status && check.critical) {
+            allPassed = false;
+          }
+        });
+
+        if (allPassed) {
+          log('\n✅ 所有关键检查通过', 'success');
+          updateStatus('✅ 诊断完成 - 系统正常', 'success');
+        } else {
+          log('\n❌ 发现关键问题，请查看上方详细日志', 'error');
+          updateStatus('❌ 发现关键问题', 'error');
+        }
+
+        log('\n=== 下一步建议 ===', 'info');
+        if (!supabaseClient) {
+          log('1. 检查 Supabase URL 和密钥配置', 'warning');
+        }
+        if (!realtimeChannel) {
+          log('2. 检查 Supabase 实时功能是否启用', 'warning');
+          log('3. 确认数据库表启用了 Realtime', 'warning');
+        }
+        log('4. 在两个浏览器中同时打开此页面进行测试', 'info');
+        log('5. 在一个浏览器中修改数据，观察另一个浏览器是否收到更新', 'info');
+      }
+
+      // 运行完整诊断
+      async function runFullDiagnostic() {
+        clearLogs();
+        log('开始完整诊断...', 'info');
+        testStartTime = Date.now();
+
+        try {
+          // 步骤1: 检查 Supabase 连接
+          log('步骤 1/5: 检查 Supabase 连接...', 'info');
+          await checkSupabaseConnection();
+
+          // 步骤2: 检查数据库表结构
+          log('步骤 2/5: 检查数据库表结构...', 'info');
+          await checkTableStructure();
+
+          // 步骤3: 检查云端数据
+          log('步骤 3/5: 检查云端数据...', 'info');
+          await checkCloudData();
+
+          // 步骤4: 测试实时同步
+          log('步骤 4/5: 测试实时同步...', 'info');
+          await testRealtimeSync();
+
+          // 步骤5: 生成诊断报告
+          log('步骤 5/5: 生成诊断报告...', 'info');
+          generateDiagnosticReport();
+
+          const duration = ((Date.now() - testStartTime) / 1000).toFixed(2);
+          log(`诊断完成！耗时: ${duration}秒`, 'success');
+
+        } catch (error) {
+          log(`诊断失败: ${error.message}`, 'error');
+          console.error('Diagnostic error:', error);
+          updateStatus('❌ 诊断失败', 'error');
+        }
+      }
+
+      // 初始化
+      function init() {
+        log('Supabase 诊断工具已加载', 'info');
+
+        // 初始化 Supabase 客户端
+        try {
+          if (typeof window.supabase !== 'undefined') {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            log('✓ Supabase 客户端初始化完成', 'success');
+            log('点击"运行完整诊断"开始检查', 'info');
+
+            // 绑定按钮事件
+            document.getElementById('btn-run-diagnostic').addEventListener('click', runFullDiagnostic);
+            document.getElementById('btn-test-realtime').addEventListener('click', testRealtimeSync);
+            document.getElementById('btn-check-cloud').addEventListener('click', checkCloudData);
+            document.getElementById('btn-clear-logs').addEventListener('click', clearLogs);
+
+            // 自动运行基础检查
+            setTimeout(() => {
+              log('自动运行基础连接检查...', 'info');
+              checkSupabaseConnection().catch(err => {
+                log(`基础连接检查失败: ${err.message}`, 'error');
+              });
+            }, 1000);
+
+          } else {
+            log('❌ Supabase SDK 未加载，请检查网络连接', 'error');
+            updateStatus('❌ Supabase SDK 未加载', 'error');
+          }
+        } catch (error) {
+          log(`❌ 初始化失败: ${error.message}`, 'error');
+          updateStatus('❌ 初始化失败', 'error');
+        }
+      }
+
+      // 页面加载完成后初始化
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+
+    })();
+  </script>
+</body>
+</html>

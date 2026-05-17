@@ -537,12 +537,45 @@
       -webkit-backdrop-filter: blur(16px);
       width: 100%;
       max-width: 420px;
+      max-height: 85vh; // 限制最大高度为视口的85%
       border-radius: var(--radius) var(--radius) 0 0;
       padding: 1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
       border: 1px solid rgba(255, 255, 255, 0.9);
       box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.15);
       transform: translateY(100%);
       transition: transform 0.25s ease;
+      overflow-y: auto; // 添加垂直滚动
+      -webkit-overflow-scrolling: touch; // iOS平滑滚动
+    }
+
+    /*// 优化滚动条样式*/
+    .sheet::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sheet::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 3px;
+    }
+
+    .sheet::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 3px;
+    }
+
+    .sheet::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    /*// 确保按钮区域始终可见*/
+    .sheet-actions {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      position: sticky;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.98);
+      z-index: 1;
     }
 
     .backdrop.is-open .sheet {
@@ -558,10 +591,17 @@
         transform: scale(0.95);
         opacity: 0;
         transition: transform 0.2s, opacity 0.2s;
+        max-height: 90vh; // 桌面版也限制高度，确保不超出视口
       }
       .backdrop.is-open .sheet {
         transform: scale(1);
         opacity: 1;
+      }
+
+      // 桌面版按钮区域样式
+      .sheet-actions {
+        background: rgba(255, 255, 255, 0.98);
+        border-radius: 0 0 var(--radius) var(--radius);
       }
     }
 
@@ -1512,6 +1552,57 @@
       font-size: 0.82rem;
     }
 
+    /* Data Management Section */
+    .data-management-section {
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .data-management-header h3 {
+      margin: 0 0 0.75rem 0;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e1b4b;
+    }
+
+    .btn-clear-data {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 2px solid #ef4444;
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.1));
+      color: #dc2626;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-clear-data:hover {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      border-color: transparent;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-clear-data:active {
+      transform: translateY(0);
+    }
+
+    .data-management-hint {
+      margin: 0.5rem 0 0 0;
+      font-size: 0.72rem;
+      color: #94a3b8;
+      line-height: 1.5;
+      text-align: center;
+    }
+
     /* Weather Section */
     .weather-header {
       display: flex;
@@ -1893,6 +1984,17 @@
         </div>
         <div class="countdown-list" id="countdownList"></div>
       </div>
+
+      <!-- 数据管理区域 -->
+      <div class="data-management-section">
+        <div class="data-management-header">
+          <h3>🗄️ 数据管理</h3>
+        </div>
+        <button type="button" class="btn-clear-data" id="clearLocalDataBtn" title="清空本地所有数据">
+          🗑️ 清空本地数据
+        </button>
+        <p class="data-management-hint">清空后无法恢复，请谨慎操作！云端数据不受影响。</p>
+      </div>
     </aside>
 
     <main>
@@ -2059,21 +2161,64 @@
     const MAX_FILE_SIZE = 15 * 1024 * 1024;
     const MAX_FILES_PER_DAY = 20;
     const ANNIVERSARY_KEY = "anniversaryData_v1";
-    
+
     // Supabase 实时同步配置
     const SUPABASE_ENABLED = true; // 设置为 true 启用实时同步
     const SYNC_DEBOUNCE_TIME = 500; // 防抖时间(ms)
     let syncTimeout = null;
     let isRemoteUpdate = false; // 标记是否为远程更新
+
+    // 附件同步配置
+    const BASE64_MAX_SIZE = 500 * 1024; // 最大500KB进行Base64编码
+    const LARGE_FILE_SIZE = 2 * 1024 * 1024; // 超过2MB视为大文件
     
+    /**
+     * 文件处理工具函数
+     */
+
+    // 将文件转换为Base64
+    async function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          // 移除 data:type;base64, 前缀
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = error => reject(error);
+      });
+    }
+
+    // 将Base64转换为Blob
+    function base64ToBlob(base64, mimeType) {
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      return new Blob([byteArray], { type: mimeType });
+    }
+
+    // 判断文件是否适合Base64编码
+    function shouldUseBase64(file) {
+      return file.size <= BASE64_MAX_SIZE;
+    }
+
+    // 判断是否为大文件
+    function isLargeFile(file) {
+      return file.size >= LARGE_FILE_SIZE;
+    }
+
     /**
      * Supabase 同步工具函数
      */
     
     // 防抖同步到 Supabase
     function debounceSyncToSupabase(syncFn) {
-      if (!SUPABASE_ENABLED || !window.supabase) return;
-      
+      if (!SUPABASE_ENABLED || !window.mySupabase) return; // ✅ 修复：使用 window.mySupabase
+
       if (syncTimeout) clearTimeout(syncTimeout);
       syncTimeout = setTimeout(() => {
         syncFn().catch(err => console.error('同步到 Supabase 失败:', err));
@@ -2221,22 +2366,28 @@
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'calendar' },
-          (payload) => {
+          async (payload) => {
             if (isRemoteUpdate) return;
-            
+
             console.log('📥 接收到远程日历更新');
             isRemoteUpdate = true;
-            
+
             const { eventType, new: newData, old: oldData } = payload;
-            
+
             if (eventType === 'DELETE' && oldData) {
               delete store[oldData.dateKey];
+              // ✅ 修复：从 IndexedDB 删除
+              await idbCalendarDelete(oldData.dateKey);
+              console.log(`✅ 已删除日历数据: ${oldData.dateKey}`);
             } else if (newData) {
               store[newData.dateKey] = newData.data;
+              // ✅ 修复：更新 IndexedDB
+              await idbCalendarPut({ dateKey: newData.dateKey, data: newData.data });
+              console.log(`✅ 已更新日历数据: ${newData.dateKey}`);
             }
-            
+
             renderMonth();
-            
+
             setTimeout(() => { isRemoteUpdate = false; }, 100);
           }
         )
@@ -2250,20 +2401,28 @@
           { event: '*', schema: 'public', table: 'anniversaries' },
           async (payload) => {
             if (isRemoteUpdate) return;
-            
+
             console.log('📥 接收到远程纪念日更新');
             isRemoteUpdate = true;
-            
+
             // 重新获取所有纪念日
             const { data } = await window.mySupabase
               .from('anniversaries')
               .select('data');
-            
+
             if (data) {
               anniversaries = data.map(item => item.data);
+
+              // ✅ 修复：更新 IndexedDB
+              const existing = await idbAnniversaryGetAll();
+              await Promise.all(existing.map(a => idbAnniversaryDelete(a.id)));
+              await Promise.all(anniversaries.map(a => idbAnniversaryPut(a)));
+
+              console.log(`✅ 已同步 ${anniversaries.length} 个纪念日到本地`);
+
               renderAnniversaries();
             }
-            
+
             setTimeout(() => { isRemoteUpdate = false; }, 100);
           }
         )
@@ -2277,25 +2436,147 @@
           { event: '*', schema: 'public', table: 'countdowns' },
           async (payload) => {
             if (isRemoteUpdate) return;
-            
+
             console.log('📥 接收到远程倒计时更新');
             isRemoteUpdate = true;
-            
+
             // 重新获取所有倒计时
             const { data } = await window.mySupabase
               .from('countdowns')
               .select('data');
-            
+
             if (data) {
               countdowns = data.map(item => item.data);
+
+              // ✅ 修复：更新 IndexedDB
+              const existing = await idbCountdownGetAll();
+              await Promise.all(existing.map(c => idbCountdownDelete(c.id)));
+              await Promise.all(countdowns.map(c => idbCountdownPut(c)));
+
+              console.log(`✅ 已同步 ${countdowns.length} 个倒计时到本地`);
+
               renderCountdowns();
             }
-            
+
             setTimeout(() => { isRemoteUpdate = false; }, 100);
           }
         )
         .subscribe();
-      
+
+      // ✅ 新增：监听天气数据变化
+      window.mySupabase
+        .channel('weather_changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'weather' },
+          async (payload) => {
+            if (isRemoteUpdate) return;
+
+            console.log('📥 接收到远程天气更新');
+            isRemoteUpdate = true;
+
+            const { eventType, new: newData, old: oldData } = payload;
+
+            if (eventType === 'DELETE' && oldData) {
+              // 从IndexedDB删除
+              await idbWeatherDelete(oldData.city);
+
+              // 从本地数组中移除
+              weatherCities = weatherCities.filter(c => c.city !== oldData.city);
+
+              console.log(`✅ 已删除天气数据: ${oldData.city}`);
+            } else if (newData) {
+              // 更新IndexedDB
+              await idbWeatherPut({ city: newData.city, data: newData.data });
+
+              // 更新或添加到本地数组
+              const existingIndex = weatherCities.findIndex(c => c.city === newData.city);
+              if (existingIndex !== -1) {
+                weatherCities[existingIndex] = newData.data;
+              } else {
+                weatherCities.push(newData.data);
+              }
+
+              console.log(`✅ 已更新天气数据: ${newData.city}`);
+            }
+
+            // 更新显示
+            if (weatherData && weatherData.city === newData?.city) {
+              weatherData = newData.data;
+            }
+            renderWeatherCities();
+            renderWeatherCurrent();
+            renderMonth();
+
+            setTimeout(() => { isRemoteUpdate = false; }, 100);
+          }
+        )
+        .subscribe();
+
+      // ✅ 新增：监听天气城市列表变化
+      window.mySupabase
+        .channel('weather_cities_changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'weather_cities' },
+          async (payload) => {
+            if (isRemoteUpdate) return;
+
+            console.log('📥 接收到远程天气城市列表更新');
+            isRemoteUpdate = true;
+
+            // 重新获取城市列表
+            const { data } = await window.mySupabase
+              .from('weather_cities')
+              .select('data');
+
+            if (data && data.length > 0) {
+              const citiesRecord = data.find(item => item.data && item.data.cities);
+              if (citiesRecord) {
+                weatherCities = citiesRecord.data.cities || [];
+                console.log(`✅ 已同步 ${weatherCities.length} 个关注城市`);
+                renderWeatherCities();
+              }
+            }
+
+            setTimeout(() => { isRemoteUpdate = false; }, 100);
+          }
+        )
+        .subscribe();
+
+      // ✅ 新增：监听天气设置变化
+      window.mySupabase
+        .channel('weather_settings_changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'weather_settings' },
+          async (payload) => {
+            if (isRemoteUpdate) return;
+
+            console.log('📥 接收到远程天气设置更新');
+            isRemoteUpdate = true;
+
+            // 重新获取设置
+            const { data } = await window.mySupabase
+              .from('weather_settings')
+              .select('data');
+
+            if (data && data.length > 0) {
+              const settingsRecord = data.find(item => item.data && item.data.settings);
+              if (settingsRecord) {
+                activeWeatherCity = settingsRecord.data.settings.activeCity || null;
+                selectedWeatherDate = settingsRecord.data.settings.selectedDate || null;
+                console.log(`✅ 已同步天气设置: 当前城市=${activeWeatherCity}`);
+                renderWeatherCities();
+                renderWeatherCurrent();
+              }
+            }
+
+            setTimeout(() => { isRemoteUpdate = false; }, 100);
+          }
+        )
+        .subscribe();
+
       console.log('✅ Supabase 实时同步已启动 - 多人协作模式');
     }
 
@@ -2359,6 +2640,7 @@
     let recordBtn, recordIcon, recordText, recordStatus, recordTimer;
     let weatherCityInput, weatherSearchBtn, weatherCurrent, weatherCityName;
     let weatherIcon, weatherTemp, weatherDesc, weatherSelectedDate, weatherCitiesList;
+    let clearLocalDataBtn;
 
     /** @type {string | null} */
     let previewObjectUrl = null;
@@ -2424,6 +2706,7 @@
       weatherDesc = document.getElementById("weatherDesc");
       weatherSelectedDate = document.getElementById("weatherSelectedDate");
       weatherCitiesList = document.getElementById("weatherCitiesList");
+      clearLocalDataBtn = document.getElementById("clearLocalDataBtn");
     }
 
     function formatRecordTime(ms) {
@@ -2524,10 +2807,26 @@
       return crypto.randomUUID ? crypto.randomUUID() : `f-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     }
 
-    function formatSize(n) {
-      if (n < 1024) return `${n} B`;
-      if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-      return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+    // 格式化文件大小
+    function formatSize(bytes) {
+      if (!bytes || bytes === 0) return "";
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    // 格式化文件大小（完整版）
+    function formatFileSize(bytes) {
+      if (!bytes || bytes === 0) return "";
+      if (bytes < 1024) return bytes + " B";
+      const units = ["KB", "MB", "GB"];
+      let size = bytes / 1024;
+      let unitIndex = 0;
+      while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex++;
+      }
+      return size.toFixed(1) + " " + units[unitIndex];
     }
 
     function escapeHtml(s) {
@@ -3019,6 +3318,52 @@ ${innerHtml}
           console.log(`✅ 已从云端恢复 ${countdowns.length} 个倒计时`);
         }
 
+        // ✅ 新增：拉取天气数据
+        const { data: weatherData, error: weatherError } = await window.mySupabase
+          .from('weather')
+          .select('city, data');
+
+        if (weatherError) {
+          console.error('拉取天气数据失败:', weatherError);
+        } else if (weatherData && weatherData.length > 0) {
+          for (const { city, data } of weatherData) {
+            await idbWeatherPut({ city, data });
+          }
+          console.log(`✅ 已从云端恢复 ${weatherData.length} 个城市天气数据`);
+        }
+
+        // ✅ 新增：拉取天气城市列表
+        const { data: citiesData, error: citiesError } = await window.mySupabase
+          .from('weather_cities')
+          .select('data');
+
+        if (citiesError) {
+          console.error('拉取天气城市列表失败:', citiesError);
+        } else if (citiesData && citiesData.length > 0) {
+          // 从第一条记录中获取城市列表（使用固定ID）
+          const citiesRecord = citiesData.find(item => item.data && item.data.cities);
+          if (citiesRecord) {
+            weatherCities = citiesRecord.data.cities || [];
+            console.log(`✅ 已从云端恢复 ${weatherCities.length} 个关注城市`);
+          }
+        }
+
+        // ✅ 新增：拉取天气设置
+        const { data: settingsData, error: settingsError } = await window.mySupabase
+          .from('weather_settings')
+          .select('data');
+
+        if (settingsError) {
+          console.error('拉取天气设置失败:', settingsError);
+        } else if (settingsData && settingsData.length > 0) {
+          const settingsRecord = settingsData.find(item => item.data && item.data.settings);
+          if (settingsRecord) {
+            activeWeatherCity = settingsRecord.data.settings.activeCity || null;
+            selectedWeatherDate = settingsRecord.data.settings.selectedDate || null;
+            console.log(`✅ 已从云端恢复天气设置: 当前城市=${activeWeatherCity}`);
+          }
+        }
+
         console.log('🎉 Supabase 云端数据拉取完成');
       } catch (e) {
         console.error('从云端拉取数据失败:', e);
@@ -3034,19 +3379,22 @@ ${innerHtml}
           store[rec.dateKey] = rec.data;
         });
 
-        // If IndexedDB is empty, try loading from Supabase first
-        if (calendarRecords.length === 0 && SUPABASE_ENABLED) {
+        // ✅ 修复：优先从云端加载最新数据（如果启用 Supabase）
+        if (SUPABASE_ENABLED) {
           await loadFromSupabase();
 
-          // Reload from IndexedDB after Supabase sync
+          // Reload from IndexedDB after Supabase sync to get latest data
           const syncedRecords = await idbCalendarGetAll();
+          store = {};
           syncedRecords.forEach(rec => {
             store[rec.dateKey] = rec.data;
           });
+          console.log('✅ 已从云端同步最新数据');
         }
 
-        // Migrate from localStorage if still empty
-        if (calendarRecords.length === 0) {
+        // Migrate from localStorage if IndexedDB is still empty
+        const finalRecords = await idbCalendarGetAll();
+        if (finalRecords.length === 0) {
           try {
             const raw = localStorage.getItem(STORAGE_KEY);
             if (raw) {
@@ -3076,9 +3424,32 @@ ${innerHtml}
 
     async function loadAnniversaries() {
       try {
+        // 先从 IndexedDB 加载
         anniversaries = await idbAnniversaryGetAll();
-        
-        // Migrate from localStorage if IndexedDB is empty
+
+        // ✅ 修复：优先从云端同步最新数据（如果启用 Supabase）
+        if (SUPABASE_ENABLED && window.mySupabase) {
+          try {
+            const { data: anniversaryData } = await window.mySupabase
+              .from('anniversaries')
+              .select('data');
+
+            if (anniversaryData && anniversaryData.length > 0) {
+              anniversaries = anniversaryData.map(item => item.data);
+
+              // 清空并重建 IndexedDB
+              const existing = await idbAnniversaryGetAll();
+              await Promise.all(existing.map(a => idbAnniversaryDelete(a.id)));
+              await Promise.all(anniversaries.map(a => idbAnniversaryPut(a)));
+
+              console.log(`✅ 已从云端同步 ${anniversaries.length} 个纪念日`);
+            }
+          } catch (e) {
+            console.log('云端纪念日同步失败，使用本地数据:', e.message);
+          }
+        }
+
+        // Migrate from localStorage if still empty
         if (anniversaries.length === 0) {
           try {
             const raw = localStorage.getItem(ANNIVERSARY_KEY);
@@ -3233,6 +3604,20 @@ ${innerHtml}
         selectedWeatherDate = null; // Reset selected date when switching city
         renderWeatherCurrent();
         renderMonth();
+
+        // ✅ 新增：同步到 Supabase
+        if (SUPABASE_ENABLED && window.mySupabase) {
+          try {
+            const { error } = await window.mySupabase
+              .from('weather_settings')
+              .upsert({ id: 'user_settings', data: { settings: { activeCity: activeWeatherCity, selectedDate: selectedWeatherDate } }, updated_at: new Date().toISOString() });
+            if (error) throw error;
+            console.log(`📤 已同步天气设置: 当前城市=${activeWeatherCity}`);
+          } catch (e) {
+            console.error('同步天气设置失败:', e);
+          }
+        }
+
         await saveWeatherData();
       }
     }
@@ -3243,9 +3628,23 @@ ${innerHtml}
       }
 
       weatherCities = weatherCities.filter(c => c.city !== cityName);
-      
+
       // Delete from IndexedDB
       await idbWeatherDelete(cityName);
+
+      // ✅ 新增：从 Supabase 删除天气数据
+      if (SUPABASE_ENABLED && window.mySupabase) {
+        try {
+          const { error } = await window.mySupabase
+            .from('weather')
+            .delete()
+            .eq('city', cityName);
+          if (error) throw error;
+          console.log(`🗑️ 已从云端删除天气数据: ${cityName}`);
+        } catch (e) {
+          console.error('删除云端天气数据失败:', e);
+        }
+      }
 
       if (activeWeatherCity === cityName) {
         if (weatherCities.length > 0) {
@@ -3365,7 +3764,7 @@ ${innerHtml}
       }
 
       // If no selected date, show first available forecast
-      if (!displayForecast && weatherData.forecasts.length > 0) {
+      if (!displayForecast && weatherData.forecasts && weatherData.forecasts.length > 0) {
         displayForecast = weatherData.forecasts[0];
       }
 
@@ -3483,18 +3882,61 @@ ${innerHtml}
 
     async function saveWeatherData() {
       try {
-        // Save all cities
+        // Save all cities to IndexedDB
         for (const city of weatherCities) {
           await idbWeatherPut({ city: city.city, data: city });
         }
-        
-        // Save metadata
-        await idbWeatherPut({ 
-          city: '__meta__', 
-          data: { activeCity: activeWeatherCity, selectedDate: selectedWeatherDate } 
+
+        // Save metadata to IndexedDB
+        await idbWeatherPut({
+          city: '__meta__',
+          data: { activeCity: activeWeatherCity, selectedDate: selectedWeatherDate }
         });
+
+        // ✅ 新增：同步到 Supabase
+        if (SUPABASE_ENABLED && window.mySupabase) {
+          await syncWeatherToSupabase();
+        }
       } catch (e) {
         console.error('保存天气数据失败:', e);
+      }
+    }
+
+    // ✅ 新增：同步天气数据到 Supabase
+    async function syncWeatherToSupabase() {
+      if (!SUPABASE_ENABLED || !window.mySupabase) return;
+
+      try {
+        // 防止循环同步
+        if (isRemoteUpdate) return;
+
+        isRemoteUpdate = true;
+
+        // 同步所有城市的天气数据
+        for (const city of weatherCities) {
+          const { error } = await window.mySupabase
+            .from('weather')
+            .upsert({ city: city.city, data: city, updated_at: new Date().toISOString() });
+          if (error) throw error;
+        }
+
+        // 同步城市列表
+        const { error: citiesError } = await window.mySupabase
+          .from('weather_cities')
+          .upsert({ id: 'cities_list', data: { cities: weatherCities }, updated_at: new Date().toISOString() });
+        if (citiesError) throw citiesError;
+
+        // 同步设置
+        const { error: settingsError } = await window.mySupabase
+          .from('weather_settings')
+          .upsert({ id: 'user_settings', data: { settings: { activeCity: activeWeatherCity, selectedDate: selectedWeatherDate } }, updated_at: new Date().toISOString() });
+        if (settingsError) throw settingsError;
+
+        console.log('📤 已同步天气数据到云端');
+      } catch (e) {
+        console.error('同步天气数据失败:', e);
+      } finally {
+        setTimeout(() => { isRemoteUpdate = false; }, 100);
       }
     }
 
@@ -3809,9 +4251,32 @@ ${innerHtml}
 
     async function loadCountdowns() {
       try {
+        // 先从 IndexedDB 加载
         countdowns = await idbCountdownGetAll();
-        
-        // Migrate from localStorage if IndexedDB is empty
+
+        // ✅ 修复：优先从云端同步最新数据（如果启用 Supabase）
+        if (SUPABASE_ENABLED && window.mySupabase) {
+          try {
+            const { data: countdownData } = await window.mySupabase
+              .from('countdowns')
+              .select('data');
+
+            if (countdownData && countdownData.length > 0) {
+              countdowns = countdownData.map(item => item.data);
+
+              // 清空并重建 IndexedDB
+              const existing = await idbCountdownGetAll();
+              await Promise.all(existing.map(c => idbCountdownDelete(c.id)));
+              await Promise.all(countdowns.map(c => idbCountdownPut(c)));
+
+              console.log(`✅ 已从云端同步 ${countdowns.length} 个倒计时`);
+            }
+          } catch (e) {
+            console.log('云端倒计时同步失败，使用本地数据:', e.message);
+          }
+        }
+
+        // Migrate from localStorage if still empty
         if (countdowns.length === 0) {
           try {
             const raw = localStorage.getItem(COUNTDOWN_KEY);
@@ -4057,6 +4522,77 @@ ${innerHtml}
         }
       } catch (e) {
         console.error('保存日历数据失败:', e);
+      }
+    }
+
+    // ✅ 新增：清空所有本地数据
+    async function clearAllLocalData() {
+      if (!confirm('⚠️ 警告：此操作将清空所有本地数据！\n\n包括：\n- 日历打卡记录\n- 备注和附件\n- 纪念日\n- 倒计时\n- 天气数据\n\n云端数据不受影响。\n\n确定要继续吗？')) {
+        return;
+      }
+
+      if (!confirm('再次确认：清空后无法恢复！\n\n请确保重要数据已同步到云端。\n\n确定要清空吗？')) {
+        return;
+      }
+
+      try {
+        console.log('🗑️ 开始清空本地数据...');
+
+        // 1. 清空日历数据
+        const calendarRecords = await idbCalendarGetAll();
+        await Promise.all(calendarRecords.map(rec => idbCalendarDelete(rec.dateKey)));
+        store = {};
+        console.log(`✅ 已清空 ${calendarRecords.length} 条日历记录`);
+
+        // 2. 清空附件
+        const db = await openIdb();
+        const tx = db.transaction(IDB_STORE_FILES, 'readwrite');
+        await new Promise((resolve, reject) => {
+          const req = tx.objectStore(IDB_STORE_FILES).clear();
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+        console.log('✅ 已清空所有附件');
+
+        // 3. 清空纪念日
+        const anniversaryRecords = await idbAnniversaryGetAll();
+        await Promise.all(anniversaryRecords.map(a => idbAnniversaryDelete(a.id)));
+        anniversaries = [];
+        console.log(`✅ 已清空 ${anniversaryRecords.length} 个纪念日`);
+
+        // 4. 清空倒计时
+        const countdownRecords = await idbCountdownGetAll();
+        await Promise.all(countdownRecords.map(c => idbCountdownDelete(c.id)));
+        countdowns = [];
+        console.log(`✅ 已清空 ${countdownRecords.length} 个倒计时`);
+
+        // 5. 清空天气数据
+        const weatherRecords = await idbWeatherGetAll();
+        await Promise.all(weatherRecords.map(w => idbWeatherDelete(w.city)));
+        weatherCities = [];
+        weatherData = null;
+        activeWeatherCity = null;
+        selectedWeatherDate = null;
+        console.log(`✅ 已清空 ${weatherRecords.length} 个城市天气数据`);
+
+        // 6. 刷新界面
+        renderMonth();
+        renderAnniversaries();
+        renderCountdowns();
+        renderWeatherCities();
+        renderWeatherCurrent();
+
+        console.log('🎉 本地数据已全部清空！');
+        alert('✅ 本地数据已清空！\n\n页面将自动刷新...');
+        
+        // 延迟刷新页面
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+
+      } catch (e) {
+        console.error('清空本地数据失败:', e);
+        alert('❌ 清空失败：' + e.message);
       }
     }
 
@@ -4307,12 +4843,22 @@ ${innerHtml}
         icon.addEventListener("click", async (e) => {
           e.stopPropagation();
           try {
+            let blob;
+
+            // 优先使用本地文件
             const rec = await idbGet(meta.id);
-            if (!rec?.blob) {
-              alert("文件未找到，可能已被清除。");
+            if (rec?.blob) {
+              blob = rec.blob;
+            } else if (meta.base64Data) {
+              // 从Base64数据还原文件
+              console.log(`📥 从Base64还原文件: ${meta.name}`);
+              blob = base64ToBlob(meta.base64Data, meta.type);
+            } else {
+              alert("文件未找到，可能已被清除或仅在本地可用。");
               return;
             }
-            await openAttachmentPreview(rec.blob, rec.name || meta.name, meta.type);
+
+            await openAttachmentPreview(blob, rec?.name || meta.name, meta.type);
           } catch (err) {
             console.error(err);
             alert("预览失败，请重试。");
@@ -4327,7 +4873,32 @@ ${innerHtml}
         nameEl.textContent = meta.name;
         const sizeEl = document.createElement("div");
         sizeEl.className = "file-row__size";
-        sizeEl.textContent = formatSize(meta.size);
+
+        // 添加同步状态信息
+        let sizeText = formatSize(meta.size);
+        let statusText = "";
+        let statusStyle = "";
+
+        if (meta.isLocalOnly) {
+          statusText = " 🔒 仅本地";
+          statusStyle = "color: #f59e0b;";
+          sizeEl.title = "大文件仅在本地存储，不同步到云端";
+        } else if (meta.base64Data) {
+          statusText = " ☁️ 已同步";
+          statusStyle = "color: #10b981;";
+          sizeEl.title = "文件已同步到云端，可在其他设备查看";
+        } else if (meta.size <= BASE64_MAX_SIZE) {
+          statusText = " ☁️ 已同步";
+          statusStyle = "color: #10b981;";
+          sizeEl.title = "文件已同步到云端，可在其他设备查看";
+        } else {
+          statusText = " 📱 本地";
+          statusStyle = "color: #6b7280;";
+          sizeEl.title = "文件存储在本地";
+        }
+
+        sizeEl.textContent = sizeText + statusText;
+        sizeEl.style = statusStyle;
         m.appendChild(nameEl);
         m.appendChild(sizeEl);
         row.appendChild(m);
@@ -4341,12 +4912,22 @@ ${innerHtml}
         pv.addEventListener("click", async (e) => {
           e.stopPropagation();
           try {
+            let blob;
+
+            // 优先使用本地文件
             const rec = await idbGet(meta.id);
-            if (!rec?.blob) {
-              alert("文件未找到，可能已被清除。");
+            if (rec?.blob) {
+              blob = rec.blob;
+            } else if (meta.base64Data) {
+              // 从Base64数据还原文件
+              console.log(`📥 从Base64还原文件: ${meta.name}`);
+              blob = base64ToBlob(meta.base64Data, meta.type);
+            } else {
+              alert("文件未找到，可能已被清除或仅在本地可用。");
               return;
             }
-            await openAttachmentPreview(rec.blob, rec.name || meta.name, meta.type);
+
+            await openAttachmentPreview(blob, rec?.name || meta.name, meta.type);
           } catch (err) {
             console.error(err);
             alert("预览失败，请重试。");
@@ -4358,15 +4939,25 @@ ${innerHtml}
         dl.textContent = "下载";
         dl.addEventListener("click", async () => {
           try {
+            let blob;
+
+            // 优先使用本地文件
             const rec = await idbGet(meta.id);
-            if (!rec?.blob) {
-              alert("文件未找到，可能已被清除。");
+            if (rec?.blob) {
+              blob = rec.blob;
+            } else if (meta.base64Data) {
+              // 从Base64数据还原文件
+              console.log(`📥 从Base64还原文件: ${meta.name}`);
+              blob = base64ToBlob(meta.base64Data, meta.type);
+            } else {
+              alert("文件未找到，可能已被清除或仅在本地可用。");
               return;
             }
-            const u = URL.createObjectURL(rec.blob);
+
+            const u = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = u;
-            a.download = rec.name || meta.name;
+            a.download = rec?.name || meta.name;
             a.click();
             URL.revokeObjectURL(u);
           } catch (e) {
@@ -4425,7 +5016,26 @@ ${innerHtml}
         nameEl.textContent = p.file.name;
         const sizeEl = document.createElement("div");
         sizeEl.className = "file-row__size";
-        sizeEl.textContent = `${formatSize(p.file.size)} · 待保存`;
+
+        // 显示文件大小和同步状态提示
+        let sizeText = formatSize(p.file.size);
+        let syncHint = "";
+
+        if (shouldUseBase64(p.file)) {
+          syncHint = " ☁️ 将同步到云端";
+          sizeEl.style.color = "#10b981";
+          sizeEl.title = "小文件将自动同步到云端";
+        } else if (isLargeFile(p.file)) {
+          syncHint = " 🔒 仅本地存储";
+          sizeEl.style.color = "#f59e0b";
+          sizeEl.title = "大文件仅在本地存储，不会同步到云端";
+        } else {
+          syncHint = " 📱 本地存储";
+          sizeEl.style.color = "#6b7280";
+          sizeEl.title = "文件将存储在本地";
+        }
+
+        sizeEl.textContent = `${sizeText}${syncHint} · 待保存`;
         m.appendChild(nameEl);
         m.appendChild(sizeEl);
         row.appendChild(m);
@@ -4630,6 +5240,8 @@ ${innerHtml}
         const newMetas = [];
         for (const p of dialogPendingFiles) {
           const id = newId();
+
+          // 保存到本地 IndexedDB
           await idbPut({
             id,
             dateKey: selectedKey,
@@ -4638,12 +5250,30 @@ ${innerHtml}
             size: p.file.size,
             blob: p.file,
           });
-          newMetas.push({
+
+          // 创建元数据
+          const meta = {
             id,
             name: p.file.name,
             type: p.file.type || "",
             size: p.file.size,
-          });
+          };
+
+          // 对小文件进行Base64编码，实现跨浏览器同步
+          if (shouldUseBase64(p.file)) {
+            try {
+              console.log(`📎 编码小文件: ${p.file.name} (${(p.file.size / 1024).toFixed(1)}KB)`);
+              meta.base64Data = await fileToBase64(p.file);
+              meta.isSynced = true; // 标记为已同步
+            } catch (e) {
+              console.error(`Base64编码失败: ${p.file.name}`, e);
+            }
+          } else if (isLargeFile(p.file)) {
+            meta.isLocalOnly = true; // 标记为仅本地
+            console.log(`📎 大文件仅本地: ${p.file.name} (${(p.file.size / 1024 / 1024).toFixed(1)}MB)`);
+          }
+
+          newMetas.push(meta);
         }
 
         const finalFiles = [...keptMeta, ...newMetas];
@@ -4846,6 +5476,11 @@ ${innerHtml}
       // Voice recording handlers
       recordBtn.addEventListener('click', toggleRecording);
 
+      // ✅ 新增：清空本地数据按钮
+      if (clearLocalDataBtn) {
+        clearLocalDataBtn.addEventListener('click', clearAllLocalData);
+      }
+
       // Weather handlers
       weatherSearchBtn.addEventListener('click', async () => {
         const city = weatherCityInput.value.trim();
@@ -4917,10 +5552,10 @@ ${innerHtml}
 
     // Ensure DOM is ready before rendering
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
+      document.addEventListener('DOMContentLoaded', async () => {
         initDOM();
-        load();
-        openIdb().catch(() => {});
+        await load();  // ✅ 修复：添加 await 等待数据加载完成
+        await openIdb().catch(() => {});
         
         // 启动 Firebase 实时同步
         setupRealtimeListeners();
@@ -4942,27 +5577,29 @@ ${innerHtml}
         initEventListeners();
       });
     } else {
-      initDOM();
-      load();
-      openIdb().catch(() => {});
-      
-      // 启动 Firebase 实时同步
-      setupRealtimeListeners();
-      
-      console.log('Lunar library loaded:', typeof Lunar !== 'undefined');
-      if (typeof Lunar !== 'undefined') {
-        console.log('Lunar version:', Lunar.version || 'unknown');
-        const today = new Date();
-        const testLunar = getLunarDate(today.getFullYear(), today.getMonth(), today.getDate());
-        console.log('Today lunar date test:', testLunar);
-      }
-      
-      renderMonth();
-      renderAnniversaries();
-      renderCountdowns();
-      renderWeatherCities();
-      renderWeatherCurrent();
-      initEventListeners();
+      (async () => {  // ✅ 使用异步立即调用函数包装
+        initDOM();
+        await load();  // ✅ 修复：添加 await
+        await openIdb().catch(() => {});
+
+        // 启动 Firebase 实时同步
+        setupRealtimeListeners();
+
+        console.log('Lunar library loaded:', typeof Lunar !== 'undefined');
+        if (typeof Lunar !== 'undefined') {
+          console.log('Lunar version:', Lunar.version || 'unknown');
+          const today = new Date();
+          const testLunar = getLunarDate(today.getFullYear(), today.getMonth(), today.getDate());
+          console.log('Today lunar date test:', testLunar);
+        }
+
+        renderMonth();
+        renderAnniversaries();
+        renderCountdowns();
+        renderWeatherCities();
+        renderWeatherCurrent();
+        initEventListeners();
+      })();
     }
   </script>
 </body>

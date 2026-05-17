@@ -54,10 +54,37 @@ CREATE TABLE countdowns (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 天气数据表
+CREATE TABLE weather (
+  city TEXT PRIMARY KEY,
+  data JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 天气城市列表表
+CREATE TABLE weather_cities (
+  id TEXT PRIMARY KEY,
+  data JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 天气设置表
+CREATE TABLE weather_settings (
+  id TEXT PRIMARY KEY,
+  data JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- 启用实时订阅
 ALTER PUBLICATION supabase_realtime ADD TABLE calendar;
 ALTER PUBLICATION supabase_realtime ADD TABLE anniversaries;
 ALTER PUBLICATION supabase_realtime ADD TABLE countdowns;
+ALTER PUBLICATION supabase_realtime ADD TABLE weather;
+ALTER PUBLICATION supabase_realtime ADD TABLE weather_cities;
+ALTER PUBLICATION supabase_realtime ADD TABLE weather_settings;
 ```
 
 点击 **Run** 执行。
@@ -76,6 +103,9 @@ GRANT SELECT ON countdowns TO anon;
 GRANT INSERT, UPDATE, DELETE ON calendar TO anon;
 GRANT INSERT, UPDATE, DELETE ON anniversaries TO anon;
 GRANT INSERT, UPDATE, DELETE ON countdowns TO anon;
+GRANT INSERT, UPDATE, DELETE ON weather TO anon;
+GRANT INSERT, UPDATE, DELETE ON weather_cities TO anon;
+GRANT INSERT, UPDATE, DELETE ON weather_settings TO anon;
 ```
 
 点击 **Run**。
@@ -124,21 +154,35 @@ const SUPABASE_ENABLED = true; // ✅ 已启用
 ## 📊 功能说明
 
 ### 实时同步的数据
-- ✅ 日历打卡记录
+- ✅ 日历打卡记录（含备注、附件元数据）
 - ✅ 备注和笔记  
-- ✅ 纪念日
-- ✅ 倒计时
-- ⚠️ 附件文件(本地 IndexedDB)
-- ⚠️ 天气数据(各用户独立)
+- ✅ 纪念日（添加、修改、删除）
+- ✅ 倒计时（添加、修改、删除）
+- ✅ 天气数据（城市列表、设置）
+- ⚠️ 大文件附件（仅本地 IndexedDB，不同步）
 
-### 技术架构
+### 数据同步机制
+
+**本地优先架构：**
 ```
-用户操作 → 本地 IndexedDB (主存储)
-         ↓
-    Supabase 云端 (同步)
-         ↓
-其他用户 ← 实时订阅更新
+用户操作 → IndexedDB (主存储) → Supabase 云端 (同步)
+                                    ↓
+其他设备 ← 实时订阅 (WebSocket) ← 云端数据库
 ```
+
+**同步流程：**
+1. **写入操作**：先保存到本地 IndexedDB，然后异步同步到 Supabase
+2. **读取操作**：优先从云端加载最新数据，降级到本地 IndexedDB
+3. **实时更新**：通过 WebSocket 监听云端变化，自动更新本地数据
+4. **防循环机制**：使用 `isRemoteUpdate` 标志避免同步死循环
+5. **批量优化**：纪念日、倒计时等使用批量同步提高性能
+
+**关键特性：**
+- 🔄 **双向同步**：本地 ↔ 云端实时保持一致
+- ⚡ **毫秒级延迟**：WebSocket 实时推送
+- 💾 **离线支持**：无网络时使用本地数据，联网后自动同步
+- 🛡️ **冲突处理**：最后写入获胜（Last Write Wins）
+- 📦 **增量同步**：只同步变化的数据，提高效率
 
 ### 优势
 - 🇨🇳 **国内速度快** - 新加坡/东京节点
@@ -197,8 +241,17 @@ Supabase 免费套餐:
 ### Q: 可以关闭同步吗?
 可以,将 `SUPABASE_ENABLED` 改为 `false` 即可。
 
-### Q: 多人同时编辑冲突怎么办?
-Supabase 使用"最后写入获胜"策略。对于日历应用,冲突概率极低。
+### Q: 多人同时编辑冲突怎么办？
+Supabase 使用“最后写入获胜”策略。对于日历应用，冲突概率极低。
+
+### Q: 如何检查数据同步状态？
+打开 `sync_status_check.html` 文件，复制检查代码到浏览器控制台执行，即可查看本地和云端数据对比。
+
+### Q: 为什么有些数据没有同步？
+1. 检查 `SUPABASE_ENABLED` 是否为 `true`
+2. 查看浏览器控制台是否有同步错误
+3. 确认网络连接正常
+4. 大文件附件（>5MB）仅本地存储，不会同步
 
 ---
 

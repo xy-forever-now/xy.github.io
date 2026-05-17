@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>存储调试工具</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      background: #f5f5f5;
+    }
+    .section {
+      background: white;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+    .section h3 {
+      margin-top: 0;
+      color: #333;
+    }
+    .data {
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .empty {
+      color: #999;
+      font-style: italic;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 IndexedDB 存储调试工具</h1>
+
+  <div class="section">
+    <h3>操作按钮</h3>
+    <button onclick="checkAllData()">📊 检查所有数据</button>
+    <button onclick="clearAllData()">🗑️ 清空所有数据</button>
+    <button onclick="testWrite()">✍️ 测试写入</button>
+  </div>
+
+  <div class="section">
+    <h3>IndexedDB 状态</h3>
+    <div id="idb-status">检查中...</div>
+  </div>
+
+  <div class="section">
+    <h3>日历数据 (calendar)</h3>
+    <div id="calendar-data" class="data">检查中...</div>
+  </div>
+
+  <div class="section">
+    <h3>纪念日数据 (anniversaries)</h3>
+    <div id="anniversary-data" class="data">检查中...</div>
+  </div>
+
+  <div class="section">
+    <h3>倒计时数据 (countdowns)</h3>
+    <div id="countdown-data" class="data">检查中...</div>
+  </div>
+
+  <div class="section">
+    <h3>localStorage 数据</h3>
+    <div id="localstorage-data" class="data">检查中...</div>
+  </div>
+
+  <script>
+    const IDB_NAME = "dailyCheckinDB_v2";
+    const IDB_STORE_CALENDAR = "calendar";
+    const IDB_STORE_ANNIVERSARIES = "anniversaries";
+    const IDB_STORE_COUNTDOWNS = "countdowns";
+
+    let idbPromise = null;
+
+    function openIdb() {
+      if (idbPromise) return idbPromise;
+      idbPromise = new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 2);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => resolve(req.result);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(IDB_STORE_CALENDAR)) {
+            db.createObjectStore(IDB_STORE_CALENDAR, { keyPath: "dateKey" });
+          }
+          if (!db.objectStoreNames.contains(IDB_STORE_ANNIVERSARIES)) {
+            db.createObjectStore(IDB_STORE_ANNIVERSARIES, { keyPath: "id" });
+          }
+          if (!db.objectStoreNames.contains(IDB_STORE_COUNTDOWNS)) {
+            db.createObjectStore(IDB_STORE_COUNTDOWNS, { keyPath: "id" });
+          }
+        };
+      });
+      return idbPromise;
+    }
+
+    async function checkAllData() {
+      document.getElementById('idb-status').innerHTML = '<span class="success">✅ IndexedDB 连接正常</span>';
+
+      // 检查日历数据
+      try {
+        const calendarData = await getAllFromStore(IDB_STORE_CALENDAR);
+        document.getElementById('calendar-data').innerHTML =
+          calendarData.length > 0
+            ? `<span class="success">✅ 找到 ${calendarData.length} 条记录</span>\n${JSON.stringify(calendarData, null, 2)}`
+            : '<span class="error">❌ 没有日历数据</span>';
+      } catch (e) {
+        document.getElementById('calendar-data').innerHTML = `<span class="error">❌ 读取失败: ${e.message}</span>`;
+      }
+
+      // 检查纪念日数据
+      try {
+        const anniversaryData = await getAllFromStore(IDB_STORE_ANNIVERSARIES);
+        document.getElementById('anniversary-data').innerHTML =
+          anniversaryData.length > 0
+            ? `<span class="success">✅ 找到 ${anniversaryData.length} 条记录</span>\n${JSON.stringify(anniversaryData, null, 2)}`
+            : '<span class="error">❌ 没有纪念日数据</span>';
+      } catch (e) {
+        document.getElementById('anniversary-data').innerHTML = `<span class="error">❌ 读取失败: ${e.message}</span>`;
+      }
+
+      // 检查倒计时数据
+      try {
+        const countdownData = await getAllFromStore(IDB_STORE_COUNTDOWNS);
+        document.getElementById('countdown-data').innerHTML =
+          countdownData.length > 0
+            ? `<span class="success">✅ 找到 ${countdownData.length} 条记录</span>\n${JSON.stringify(countdownData, null, 2)}`
+            : '<span class="error">❌ 没有倒计时数据</span>';
+      } catch (e) {
+        document.getElementById('countdown-data').innerHTML = `<span class="error">❌ 读取失败: ${e.message}</span>`;
+      }
+
+      // 检查 localStorage
+      const lsData = {
+        dailyCheckinData: localStorage.getItem('dailyCheckinData_v1'),
+        anniversaryData: localStorage.getItem('anniversaryData_v1'),
+        countdownData: localStorage.getItem('countdownData_v1')
+      };
+      document.getElementById('localstorage-data').innerHTML =
+        Object.values(lsData).some(v => v)
+          ? `<span class="success">✅ localStorage 有数据</span>\n${JSON.stringify(lsData, null, 2)}`
+          : '<span class="empty">📭 localStorage 为空</span>';
+    }
+
+    async function getAllFromStore(storeName) {
+      const db = await openIdb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readonly");
+        const store = tx.objectStore(storeName);
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function clearAllData() {
+      if (!confirm('确定要清空所有数据吗？此操作不可恢复！')) return;
+
+      try {
+        const db = await openIdb();
+
+        // 清空所有 store
+        const stores = [IDB_STORE_CALENDAR, IDB_STORE_ANNIVERSARIES, IDB_STORE_COUNTDOWNS];
+        for (const storeName of stores) {
+          await new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, "readwrite");
+            const store = tx.objectStore(storeName);
+            const request = store.clear();
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+          });
+        }
+
+        alert('✅ 所有数据已清空');
+        checkAllData();
+      } catch (e) {
+        alert(`❌ 清空失败: ${e.message}`);
+      }
+    }
+
+    async function testWrite() {
+      try {
+        const db = await openIdb();
+
+        // 测试写入纪念日
+        const testAnniversary = {
+          id: 'test-' + Date.now(),
+          name: '测试纪念日',
+          date: '2026-12-31',
+          type: 'yearly'
+        };
+
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(IDB_STORE_ANNIVERSARIES, "readwrite");
+          const store = tx.objectStore(IDB_STORE_ANNIVERSARIES);
+          const request = store.put(testAnniversary);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+
+        // 测试写入倒计时
+        const testCountdown = {
+          id: 'test-' + Date.now(),
+          name: '测试倒计时',
+          targetDate: '2027-01-01'
+        };
+
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(IDB_STORE_COUNTDOWNS, "readwrite");
+          const store = tx.objectStore(IDB_STORE_COUNTDOWNS);
+          const request = store.put(testCountdown);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+
+        alert('✅ 测试数据已写入\n请刷新页面检查数据是否持久化');
+        checkAllData();
+      } catch (e) {
+        alert(`❌ 写入失败: ${e.message}`);
+      }
+    }
+
+    // 页面加载时自动检查
+    window.addEventListener('load', () => {
+      console.log('🔍 存储调试工具已加载');
+      checkAllData();
+    });
+  </script>
+</body>
+</html>

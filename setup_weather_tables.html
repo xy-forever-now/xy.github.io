@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase 天气表创建工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+        .sql-code {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            border: 1px solid #ddd;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin: 20px auto;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Supabase 天气表创建工具</h1>
+        
+        <div class="instructions">
+            <h3>📋 操作步骤：</h3>
+            <ol>
+                <li>登录到你的 Supabase 项目: <a href="https://vorwjvwwqdukkalxibiy.supabase.co" target="_blank">https://vorwjvwwqdukkalxibiy.supabase.co</a></li>
+                <li>进入左侧菜单的 <strong>SQL Editor</strong></li>
+                <li>点击 <strong>New Query</strong></li>
+                <li>复制下面的 SQL 代码并粘贴到编辑器中</li>
+                <li>点击 <strong>Run</strong> 执行</li>
+            </ol>
+        </div>
+
+        <h3>📝 需要执行的 SQL 代码：</h3>
+        <div class="sql-code" id="sqlCode">
+-- 创建天气数据表
+-- 用于同步用户添加的城市天气数据
+
+-- 删除旧的 weather 表（如果存在）
+DROP TABLE IF EXISTS "public"."weather" CASCADE;
+
+-- 创建 weather 表
+CREATE TABLE "public"."weather" (
+  "city" TEXT NOT NULL PRIMARY KEY,
+  "data" JSONB NOT NULL,
+  "created_at" TIMESTAMPTZ DEFAULT NOW(),
+  "updated_at" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 创建城市列表表（用于同步用户的关注城市列表）
+CREATE TABLE IF NOT EXISTS "public"."weather_cities" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "data" JSONB NOT NULL,
+  "created_at" TIMESTAMPTZ DEFAULT NOW(),
+  "updated_at" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 创建天气设置表（用于同步用户选择的城市和日期）
+CREATE TABLE IF NOT EXISTS "public"."weather_settings" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "data" JSONB NOT NULL,
+  "created_at" TIMESTAMPTZ DEFAULT NOW(),
+  "updated_at" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 启用 Row Level Security
+ALTER TABLE "public"."weather" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."weather_cities" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."weather_settings" ENABLE ROW LEVEL SECURITY;
+
+-- 创建允许匿名访问的策略
+-- 天气数据策略
+CREATE POLICY "Allow anonymous select" ON "public"."weather"
+  FOR SELECT TO anon USING (true);
+
+CREATE POLICY "Allow anonymous insert" ON "public"."weather"
+  FOR INSERT TO anon WITH CHECK (true);
+
+CREATE POLICY "Allow anonymous update" ON "public"."weather"
+  FOR UPDATE TO anon USING (true);
+
+CREATE POLICY "Allow anonymous delete" ON "public"."weather"
+  FOR DELETE TO anon USING (true);
+
+-- 城市列表策略
+CREATE POLICY "Allow anonymous select" ON "public"."weather_cities"
+  FOR SELECT TO anon USING (true);
+
+CREATE POLICY "Allow anonymous insert" ON "public"."weather_cities"
+  FOR INSERT TO anon WITH CHECK (true);
+
+CREATE POLICY "Allow anonymous update" ON "public"."weather_cities"
+  FOR UPDATE TO anon USING (true);
+
+CREATE POLICY "Allow anonymous delete" ON "public"."weather_cities"
+  FOR DELETE TO anon USING (true);
+
+-- 设置策略
+CREATE POLICY "Allow anonymous select" ON "public"."weather_settings"
+  FOR SELECT TO anon USING (true);
+
+CREATE POLICY "Allow anonymous insert" ON "public"."weather_settings"
+  FOR INSERT TO anon WITH CHECK (true);
+
+CREATE POLICY "Allow anonymous update" ON "public"."weather_settings"
+  FOR UPDATE TO anon USING (true);
+
+CREATE POLICY "Allow anonymous delete" ON "public"."weather_settings"
+  FOR DELETE TO anon USING (true);
+        </div>
+
+        <button class="btn" onclick="copySql()">复制 SQL 代码</button>
+        
+        <div class="instructions">
+            <h3>✅ 验证表是否创建成功：</h3>
+            <p>在 SQL Editor 中运行以下查询来验证表是否创建成功：</p>
+            <div class="sql-code">
+SELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN ('weather', 'weather_cities', 'weather_settings');
+            </div>
+            <p>如果返回 3 行记录，说明表创建成功！</p>
+        </div>
+
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        function copySql() {
+            const sqlCode = document.getElementById('sqlCode').textContent;
+            navigator.clipboard.writeText(sqlCode).then(() => {
+                const status = document.getElementById('status');
+                status.textContent = '✅ SQL 代码已复制到剪贴板！';
+                status.className = 'status success';
+                
+                setTimeout(() => {
+                    status.textContent = '';
+                }, 3000);
+            }).catch(err => {
+                const status = document.getElementById('status');
+                status.textContent = '❌ 复制失败: ' + err;
+                status.className = 'status error';
+            });
+        }
+    </script>
+</body>
+</html>

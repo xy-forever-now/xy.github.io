@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase 数据同步状态检查</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+        .status-card.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .status-card.warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        .status-card.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .table-name {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .row-count {
+            font-size: 2em;
+            color: #667eea;
+            font-weight: bold;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .actions {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .sync-status {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .sync-item {
+            text-align: center;
+            padding: 15px;
+            min-width: 150px;
+        }
+        .sync-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Supabase 数据同步状态检查</h1>
+        <p class="subtitle">实时查看本地和云端数据同步状态</p>
+
+        <div class="info-box">
+            <strong>💡 使用说明：</strong>
+            <ol>
+                <li>打开你的应用 <code>index.html</code></li>
+                <li>按 F12 打开浏览器控制台</li>
+                <li>复制下面的 JavaScript 代码并粘贴到控制台执行</li>
+                <li>查看返回的同步状态报告</li>
+            </ol>
+        </div>
+
+        <h3>📝 检查代码（复制到浏览器控制台执行）：</h3>
+        <div style="background: #2d2d2d; color: #f8f8f2; padding: 20px; border-radius: 8px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.6;">
+<pre id="checkCode">// 检查 Supabase 数据同步状态
+async function checkSyncStatus() {
+  console.log('🔍 开始检查数据同步状态...\n');
+  
+  const results = {};
+  
+  // 检查日历数据
+  const calendarLocal = Object.keys(store || {}).length;
+  const { data: calendarCloud } = await window.mySupabase.from('calendar').select('*');
+  const calendarCloudCount = calendarCloud?.length || 0;
+  results.calendar = { local: calendarLocal, cloud: calendarCloudCount };
+  
+  // 检查纪念日
+  const anniversaryLocal = (anniversaries || []).length;
+  const { data: anniversaryCloud } = await window.mySupabase.from('anniversaries').select('*');
+  const anniversaryCloudCount = anniversaryCloud?.length || 0;
+  results.anniversaries = { local: anniversaryLocal, cloud: anniversaryCloudCount };
+  
+  // 检查倒计时
+  const countdownLocal = (countdowns || []).length;
+  const { data: countdownCloud } = await window.mySupabase.from('countdowns').select('*');
+  const countdownCloudCount = countdownCloud?.length || 0;
+  results.countdowns = { local: countdownLocal, cloud: countdownCloudCount };
+  
+  // 检查天气数据
+  const weatherLocal = (weatherCities || []).length;
+  const { data: weatherCloud } = await window.mySupabase.from('weather').select('*');
+  const weatherCloudCount = weatherCloud?.length || 0;
+  results.weather = { local: weatherLocal, cloud: weatherCloudCount };
+  
+  // 检查结果
+  console.log('📊 数据同步状态报告：\n');
+  console.table(results);
+  
+  let allSynced = true;
+  for (const [table, counts] of Object.entries(results)) {
+    const status = counts.local === counts.cloud ? '✅' : '❌';
+    if (counts.local !== counts.cloud) allSynced = false;
+    console.log(`${status} ${table}: 本地=${counts.local}, 云端=${counts.cloud}`);
+  }
+  
+  console.log('\n' + (allSynced ? '✅ 所有数据已同步！' : '⚠️ 存在未同步的数据'));
+  return results;
+}
+
+// 执行检查
+checkSyncStatus();</pre>
+        </div>
+
+        <div class="actions">
+            <button class="btn" onclick="copyCheckCode()">📋 复制检查代码</button>
+            <button class="btn btn-danger" onclick="window.open('clear_all_supabase_data.sql', '_blank')">🗑️ 清空云端数据</button>
+        </div>
+
+        <div class="info-box">
+            <strong>🔄 数据同步机制说明：</strong>
+            <ul>
+                <li><strong>本地优先：</strong>所有操作先保存到 IndexedDB</li>
+                <li><strong>自动同步：</strong>启用 Supabase 后，自动同步到云端</li>
+                <li><strong>实时更新：</strong>通过 WebSocket 监听其他设备的更改</li>
+                <li><strong>防循环：</strong>使用 <code>isRemoteUpdate</code> 标志防止同步循环</li>
+                <li><strong>批量同步：</strong>纪念日、倒计时等使用批量同步提高性能</li>
+            </ul>
+        </div>
+
+        <div class="info-box">
+            <strong>✅ 已实现同步的功能：</strong>
+            <ul>
+                <li>✅ 日历打卡记录（含备注、附件元数据）</li>
+                <li>✅ 纪念日列表（添加、修改、删除）</li>
+                <li>✅ 倒计时列表（添加、修改、删除）</li>
+                <li>✅ 天气城市列表</li>
+                <li>✅ 天气设置（当前城市、选中日期）</li>
+                <li>⚠️ 大文件附件（仅本地存储，不同步）</li>
+            </ul>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function copyCheckCode() {
+            const code = document.getElementById('checkCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('✅ 检查代码已复制到剪贴板！\n\n请打开 index.html 的控制台粘贴执行。');
+            }).catch(err => {
+                alert('❌ 复制失败: ' + err);
+            });
+        }
+    </script>
+</body>
+</html>
