@@ -83,6 +83,9 @@
       .app {
         grid-template-columns: 1fr;
       }
+      .anniversary-panel {
+        position: static;
+      }
     }
 
     header {
@@ -1935,6 +1938,303 @@
       font-size: 0.85rem;
       font-weight: 600;
       color: #4f46e5;
+    }
+
+    /* ===== 全局防重叠响应式 ===== */
+    html {
+      overflow-x: hidden;
+    }
+
+    body {
+      overflow-x: hidden;
+      width: 100%;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    /* 大屏幕 (>1200px) - 默认双栏 */
+
+    /* 中等屏幕 (901px - 1200px) */
+    @media (max-width: 1200px) and (min-width: 901px) {
+      .app {
+        max-width: 100%;
+        padding: 1rem 0.75rem 2rem;
+        grid-template-columns: 240px 1fr;
+        gap: 1rem;
+      }
+      .cell {
+        min-height: 70px;
+        padding: 0.35rem 0.3rem 0.3rem;
+      }
+      .anniversary-panel {
+        padding: 1rem;
+      }
+    }
+
+    /* 小屏幕 (<=900px) - 单栏布局 */
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+        padding: 0.75rem 0.5rem 1.5rem;
+        gap: 0.75rem;
+      }
+
+      header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        margin-bottom: 0;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        text-align: center;
+      }
+
+      .month-nav {
+        justify-content: center;
+      }
+
+      /* 侧栏变为上方，日历在下方 */
+      .anniversary-panel {
+        position: static;
+        order: -1;
+        border-radius: 16px;
+        padding: 0.85rem;
+        gap: 0.85rem;
+      }
+
+      .anniversary-list {
+        max-height: 150px;
+      }
+
+      .weather-cities-list {
+        max-height: 80px;
+      }
+
+      .cell {
+        min-height: 60px;
+        padding: 0.3rem 0.25rem 0.25rem;
+        border-radius: 10px;
+      }
+
+      .cell-day {
+        font-size: 0.72rem;
+      }
+
+      .cell-note-preview {
+        font-size: 0.6rem;
+        padding: 0.2rem 0.25rem;
+        line-height: 1.35;
+      }
+
+      .cell--today .cell-day {
+        width: 1.4rem;
+        height: 1.4rem;
+        font-size: 0.7rem;
+      }
+
+      .weekdays {
+        padding: 10px 8px 6px;
+        gap: 4px;
+      }
+
+      .weekdays span {
+        font-size: 0.65rem;
+        padding: 0.3rem 0.1rem;
+      }
+
+      .grid {
+        gap: 5px;
+        padding: 5px 8px 10px;
+      }
+
+      .legend {
+        font-size: 0.72rem;
+        padding: 0.6rem 0.75rem;
+        gap: 0.5rem 0.75rem;
+      }
+
+      .countdown-section {
+        margin-top: 0.85rem;
+        padding-top: 0.75rem;
+      }
+
+      .data-management-section {
+        margin-top: 0.85rem;
+        padding-top: 0.75rem;
+      }
+    }
+
+    /* 手机竖屏 (<=480px) */
+    @media (max-width: 480px) {
+      .app {
+        padding: 0.5rem 0.35rem 1rem;
+        gap: 0.5rem;
+      }
+
+      h1 {
+        font-size: 1.25rem;
+      }
+
+      .month-nav button {
+        width: 34px;
+        height: 34px;
+        font-size: 1rem;
+      }
+
+      .month-label {
+        min-width: 7rem;
+        font-size: 0.85rem;
+      }
+
+      .month-picker {
+        min-width: 8rem;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+      }
+
+      .anniversary-panel {
+        padding: 0.65rem;
+        gap: 0.65rem;
+        border-radius: 14px;
+      }
+
+      .anniversary-header h3,
+      .countdown-header h3,
+      .weather-header h3,
+      .data-management-header h3 {
+        font-size: 0.9rem;
+      }
+
+      .cell {
+        min-height: 48px;
+        padding: 0.2rem;
+        gap: 0.15rem;
+        border-radius: 8px;
+      }
+
+      .cell-day {
+        font-size: 0.65rem;
+      }
+
+      .cell-note-preview {
+        font-size: 0.55rem;
+        padding: 0.15rem 0.2rem;
+        border-radius: 6px;
+        line-height: 1.3;
+      }
+
+      .cell--today .cell-day {
+        width: 1.2rem;
+        height: 1.2rem;
+        font-size: 0.6rem;
+        border-radius: 7px;
+      }
+
+      .lunar-date {
+        font-size: 0.5rem;
+      }
+
+      .holiday-indicator {
+        font-size: 0.5rem;
+        padding: 0px 2px;
+      }
+
+      .dot {
+        width: 6px;
+        height: 6px;
+      }
+
+      .cell-status {
+        gap: 2px;
+      }
+
+      .cell-file-badge {
+        font-size: 0.55rem;
+        min-width: 0.8rem;
+        height: 0.8rem;
+      }
+
+      .weekdays {
+        padding: 8px 5px 4px;
+        gap: 3px;
+      }
+
+      .weekdays span {
+        font-size: 0.58rem;
+        padding: 0.25rem 0.05rem;
+        border-radius: 6px;
+      }
+
+      .grid {
+        gap: 3px;
+        padding: 3px 5px 8px;
+      }
+
+      .legend {
+        font-size: 0.65rem;
+        padding: 0.5rem;
+        gap: 0.35rem 0.5rem;
+        border-radius: 10px;
+      }
+
+      .calendar-card {
+        border-radius: 16px;
+      }
+
+      /* 弹窗适配 */
+      .sheet {
+        max-width: 100%;
+        padding: 1rem 0.85rem;
+        border-radius: 14px 14px 0 0;
+      }
+
+      .rte-sheet {
+        max-width: 100%;
+        padding: 0.75rem;
+        border-radius: 12px;
+      }
+
+      .preview-sheet {
+        max-width: 100%;
+        border-radius: 12px;
+      }
+
+      .btn-clear-data {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.8rem;
+      }
+    }
+
+    /* 超小屏幕 (<=360px) */
+    @media (max-width: 360px) {
+      .app {
+        padding: 0.35rem 0.25rem 0.75rem;
+      }
+
+      .cell {
+        min-height: 40px;
+        padding: 0.15rem;
+      }
+
+      .cell-note-preview {
+        display: none;
+      }
+
+      .grid {
+        gap: 2px;
+        padding: 2px 3px 6px;
+      }
+
+      .weekdays {
+        gap: 2px;
+        padding: 6px 3px 3px;
+      }
     }
   </style>
 </head>
