@@ -2487,12 +2487,13 @@
       }
 
       try {
-        // 获取 IP 和位置信息
-        const ipResponse = await fetch('http://ip-api.com/json/?lang=zh-CN');
+        // 获取 IP 和位置信息（使用 HTTPS API）
+        const ipResponse = await fetch('https://ipapi.co/json/');
         const ipData = await ipResponse.json();
 
-        if (ipData.status !== 'success') {
-          console.error('获取 IP 信息失败:', ipData.message);
+        // ipapi.co 使用 error 字段来判断是否成功
+        if (ipData.error) {
+          console.error('获取 IP 信息失败:', ipData.reason);
           return;
         }
 
