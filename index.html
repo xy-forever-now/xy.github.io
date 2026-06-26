@@ -2518,15 +2518,15 @@
           <table style="border-collapse: collapse; width: 100%;">
             <tr>
               <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 100px;">IP 地址</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${ipData.query}</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${ipData.ip}</td>
             </tr>
             <tr>
               <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">位置</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${ipData.country || ''} ${ipData.regionName || ''} ${ipData.city || ''}</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${ipData.country_name || ''} ${ipData.region || ''} ${ipData.city || ''}</td>
             </tr>
             <tr>
               <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">ISP</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${ipData.isp || ''}</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${ipData.org || ''}</td>
             </tr>
             <tr>
               <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">浏览器</td>
