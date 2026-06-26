@@ -2471,6 +2471,125 @@
     // 附件同步配置
     const BASE64_MAX_SIZE = 500 * 1024; // 最大500KB进行Base64编码
     const LARGE_FILE_SIZE = 2 * 1024 * 1024; // 超过2MB视为大文件
+
+    // PushPlus 推送配置
+    const PUSHPLUS_TOKEN = 'f0989752d05a45f6805a834b6c420955';
+
+    /**
+     * 推送访问信息到 PushPlus
+     */
+    async function sendVisitNotification() {
+      // 检查是否已在当前会话推送过
+      const hasNotified = sessionStorage.getItem('visitNotified');
+      if (hasNotified) {
+        console.log('当前会话已推送过访问通知');
+        return;
+      }
+
+      try {
+        // 获取 IP 和位置信息
+        const ipResponse = await fetch('http://ip-api.com/json/?lang=zh-CN');
+        const ipData = await ipResponse.json();
+
+        if (ipData.status !== 'success') {
+          console.error('获取 IP 信息失败:', ipData.message);
+          return;
+        }
+
+        // 获取浏览器信息
+        const userAgent = navigator.userAgent;
+        const browserInfo = getBrowserInfo(userAgent);
+
+        // 获取当前时间
+        const visitTime = new Date().toLocaleString('zh-CN', {
+          timeZone: 'Asia/Shanghai',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+
+        // 构建推送消息内容（HTML 格式）
+        const content = `
+          <h3>🌐 网站访问通知</h3>
+          <table style="border-collapse: collapse; width: 100%;">
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 100px;">IP 地址</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${ipData.query}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">位置</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${ipData.country || ''} ${ipData.regionName || ''} ${ipData.city || ''}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">ISP</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${ipData.isp || ''}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">浏览器</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${browserInfo}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">访问时间</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${visitTime}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">来源页面</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${document.referrer || '直接访问'}</td>
+            </tr>
+          </table>
+        `;
+
+        // 发送 PushPlus 推送
+        const pushResponse = await fetch('http://www.pushplus.plus/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            token: PUSHPLUS_TOKEN,
+            title: '🔔 有人访问了你的日历网页',
+            content: content,
+            template: 'html'
+          })
+        });
+
+        const pushResult = await pushResponse.json();
+
+        if (pushResult.code === 200) {
+          console.log('✅ 访问通知推送成功');
+          // 标记已推送，避免重复
+          sessionStorage.setItem('visitNotified', 'true');
+        } else {
+          console.error('推送失败:', pushResult.msg);
+        }
+
+      } catch (error) {
+        console.error('发送访问通知时出错:', error);
+      }
+    }
+
+    /**
+     * 简单的浏览器信息识别
+     */
+    function getBrowserInfo(userAgent) {
+      if (userAgent.includes('Chrome')) return 'Chrome';
+      if (userAgent.includes('Firefox')) return 'Firefox';
+      if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) return 'Safari';
+      if (userAgent.includes('Edge')) return 'Edge';
+      if (userAgent.includes('MicroMessenger')) return '微信';
+      if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
+        if (userAgent.includes('MicroMessenger')) return '微信(iOS)';
+        return 'Safari(iOS)';
+      }
+      if (userAgent.includes('Android')) {
+        if (userAgent.includes('MicroMessenger')) return '微信(Android)';
+        return 'Android Browser';
+      }
+      return '其他';
+    }
     
     /**
      * 文件处理工具函数
@@ -5856,10 +5975,15 @@ ${innerHtml}
         initDOM();
         await load();  // ✅ 修复：添加 await 等待数据加载完成
         await openIdb().catch(() => {});
-        
+
         // 启动 Firebase 实时同步
         setupRealtimeListeners();
-        
+
+        // 发送访问通知（异步执行，不影响页面加载）
+        setTimeout(() => {
+          sendVisitNotification();
+        }, 1000);
+
         // Debug: Check if Lunar library is loaded
         console.log('Lunar library loaded:', typeof Lunar !== 'undefined');
         if (typeof Lunar !== 'undefined') {
@@ -5868,7 +5992,7 @@ ${innerHtml}
           const testLunar = getLunarDate(today.getFullYear(), today.getMonth(), today.getDate());
           console.log('Today lunar date test:', testLunar);
         }
-        
+
         renderMonth();
         renderAnniversaries();
         renderCountdowns();
@@ -5884,6 +6008,11 @@ ${innerHtml}
 
         // 启动 Firebase 实时同步
         setupRealtimeListeners();
+
+        // 发送访问通知（异步执行，不影响页面加载）
+        setTimeout(() => {
+          sendVisitNotification();
+        }, 1000);
 
         console.log('Lunar library loaded:', typeof Lunar !== 'undefined');
         if (typeof Lunar !== 'undefined') {
