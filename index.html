@@ -2475,6 +2475,51 @@
     // PushPlus 推送配置
     const PUSHPLUS_TOKEN = 'f0989752d05a45f6805a834b6c420955';
 
+    // 中英文地理位置映射表
+    const LOCATION_CN_MAP = {
+      // 国家
+      'China': '中国',
+      // 省份/直辖市
+      'Beijing': '北京',
+      'Shanghai': '上海',
+      'Tianjin': '天津',
+      'Chongqing': '重庆',
+      'Guangdong': '广东',
+      'Zhejiang': '浙江',
+      'Jiangsu': '江苏',
+      'Shandong': '山东',
+      'Sichuan': '四川',
+      'Hubei': '湖北',
+      'Henan': '河南',
+      'Fujian': '福建',
+      'Hunan': '湖南',
+      'Anhui': '安徽',
+      'Hebei': '河北',
+      'Shaanxi': '陕西',
+      'Liaoning': '辽宁',
+      'Jiangxi': '江西',
+      'Yunnan': '云南',
+      'Guangxi': '广西',
+      'Guizhou': '贵州',
+      'Shanxi': '山西',
+      'Jilin': '吉林',
+      'Heilongjiang': '黑龙江',
+      'Inner Mongolia': '内蒙古',
+      'Gansu': '甘肃',
+      'Qinghai': '青海',
+      'Xinjiang': '新疆',
+      'Tibet': '西藏',
+      'Hainan': '海南',
+      'Ningxia': '宁夏',
+      'Macau': '澳门',
+      'Hong Kong': '香港',
+      'Taiwan': '台湾',
+    };
+
+    function toChineseLocation(name) {
+      return LOCATION_CN_MAP[name] || name;
+    }
+
     /**
      * 推送访问信息到 PushPlus
      */
@@ -2488,12 +2533,12 @@
 
       try {
         // 获取 IP 和位置信息（使用 HTTPS API）
-        const ipResponse = await fetch('https://ipapi.co/json/');
+        const ipResponse = await fetch('https://api.ip.sb/geoip/');
         const ipData = await ipResponse.json();
 
-        // ipapi.co 使用 error 字段来判断是否成功
-        if (ipData.error) {
-          console.error('获取 IP 信息失败:', ipData.reason);
+        // 检查是否成功获取 IP 信息
+        if (!ipData || !ipData.ip) {
+          console.error('获取 IP 信息失败');
           return;
         }
 
@@ -2522,11 +2567,11 @@
             </tr>
             <tr>
               <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">位置</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${ipData.country_name || ''} ${ipData.region || ''} ${ipData.city || ''}</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${toChineseLocation(ipData.country || '')} ${toChineseLocation(ipData.region || '')} ${toChineseLocation(ipData.city || '')}</td>
             </tr>
             <tr>
               <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">ISP</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${ipData.org || ''}</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${ipData.isp || ipData.organization || ''}</td>
             </tr>
             <tr>
               <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">浏览器</td>
